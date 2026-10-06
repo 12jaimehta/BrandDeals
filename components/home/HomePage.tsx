@@ -36,8 +36,8 @@ const steps = [
   {
     n: "01",
     title: "Connect where deals land",
-    copy: "Gmail signs you in and becomes your account. Instagram attaches next as a professional account. WhatsApp Business, Outlook, X and Messenger follow — one desk for every inbox, so you stop checking six apps.",
-    points: ["One-tap connect", "Add more anytime", "Skip whenever you like"],
+    copy: "Sign in with Google to create your account, then connect only the inboxes you use — Gmail, Instagram, WhatsApp Business, Outlook, X and Messenger. Nothing is mandatory. One desk for every inbox, so you stop checking six apps.",
+    points: ["Sign in with Google", "Every inbox optional", "Skip whenever you like"],
   },
   {
     n: "02",
@@ -82,7 +82,7 @@ const faqs = [
   },
   {
     q: "Which inboxes can I connect?",
-    a: "Gmail and Instagram today. WhatsApp Business, Outlook, X and Messenger are coming soon — one desk for every inbox, so you stop checking six apps.",
+    a: "Gmail and Instagram today. WhatsApp Business, Outlook, X and Messenger are ready to switch on — every inbox is optional, so connect only what you use.",
   },
 ];
 
@@ -94,7 +94,7 @@ export function HomePage() {
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#14110e] text-[#f6f1e8] antialiased">
       <div className="site-grain" aria-hidden="true" />
-      <motion.div className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-[#ff5a36]" style={{ scaleX: reduce ? 0 : bar }} />
+      {/* <motion.div className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-[#ff5a36]" style={{ scaleX: reduce ? 0 : bar }} /> */}
       <Backdrop />
       <Nav />
       <main className="relative z-10">
@@ -112,7 +112,7 @@ export function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <span className="flex items-center gap-2">
             <span className="grid h-6 w-6 place-items-center rounded-md bg-[#ff5a36] text-xs font-semibold text-[#14110e]">B</span>
-            Brand Deal Inbox · nothing is ever sent for you
+            Brand Deal Inbox · you approve every send
           </span>
           <span className="flex gap-4">
             <Link href="/connect" className="hover:text-[#f6f1e8]">Inboxes</Link>
@@ -149,6 +149,7 @@ function Nav() {
           <a href="#letter" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white sm:inline">Live read</a>
           <a href="#rates" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white md:inline">Rate engine</a>
           <Link href="/connect" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Inboxes</Link>
+          <Link href="/login" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Sign in</Link>
           <Link href="/deals" className="ml-1 whitespace-nowrap rounded-full bg-[#f6f1e8] px-3.5 py-2 font-medium text-[#14110e] hover:bg-white">Open desk</Link>
         </nav>
       </div>

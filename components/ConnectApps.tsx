@@ -6,37 +6,74 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
+type InboxId = "gmail" | "instagram" | "whatsapp" | "outlook" | "x" | "messenger";
+
 const notices: Record<string, string> = {
   error: "Google sign-in did not finish. Please try again.",
   unconfigured: "Sign-in isn't set up yet. Please come back in a bit.",
+  "logged-in": "Signed in. Connect any inbox you use — or skip straight to the desk.",
   "signed-in": "Gmail is connected. Add another inbox, or continue to the desk.",
   "needs-sql": "Your account needs a quick setup on our side — please try again in a moment.",
   "no-gmail-token": "Google signed you in, but didn't grant inbox access. Connect Gmail again.",
   "no-secret": "We couldn't save the connection. Please try again.",
   "save-failed": "Saving the connection failed. Please try again.",
   instagram: "Instagram is connected. Add another inbox, or continue to the desk.",
-  "instagram-unconfigured": "Instagram isn't set up yet. Please come back in a bit.",
+  "instagram-unconfigured": "Instagram isn't set up yet. Add the Instagram keys, then retry.",
   "instagram-denied": "Instagram sign-in was cancelled.",
   "instagram-mismatch": "Instagram sign-in expired. Connect it again.",
   "instagram-failed": "Instagram didn't finish connecting. Use a professional account and allow message access.",
-  "needs-instagram-sql": "Your account needs a quick setup on our side — please try again in a moment.",
-  "sign-in-first": "Connect Gmail first. That creates your account, then Instagram can be added.",
+  "needs-instagram-sql": "Run supabase/migrations/0002_instagram.sql in the Supabase SQL editor, then connect Instagram again.",
+  "sign-in-first": "Sign in first — then connect any inbox. Nothing connects on its own.",
   "instagram-localhost": "Instagram needs a secure address. Connect it from your live site address, not localhost.",
+  "outlook-unconfigured": "Outlook needs a Microsoft app registration first. The setup notes below list the two keys.",
+  "x-unconfigured": "X needs a developer app first. The setup notes below list the two keys.",
+  "whatsapp-unconfigured": "WhatsApp Business needs a Meta app with the WhatsApp product first. Keys are listed below.",
+  "messenger-unconfigured": "Messenger needs a Meta app with the Messenger product first. Keys are listed below.",
 };
+
+const setupHints: Record<string, string> = {
+  gmail: "Sign-in isn't set up yet. Please come back in a bit.",
+  instagram: "Instagram isn't set up yet. Please come back in a bit.",
+  whatsapp: "WhatsApp Business needs WHATSAPP_APP_ID and WHATSAPP_APP_SECRET. The setup notes below have the steps.",
+  outlook: "Outlook needs OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET. The setup notes below have the steps.",
+  x: "X needs X_CLIENT_ID and X_CLIENT_SECRET. The setup notes below have the steps.",
+  messenger: "Messenger needs MESSENGER_APP_ID and MESSENGER_APP_SECRET. The setup notes below have the steps.",
+};
+
+const setupNotes: Array<{ name: string; keys: string; steps: string }> = [
+  {
+    name: "Outlook",
+    keys: "OUTLOOK_CLIENT_ID · OUTLOOK_CLIENT_SECRET",
+    steps: "Register an app in the Microsoft Entra admin center, add the Mail.Read and Mail.Send delegated permissions, and set the redirect URI to your-site/auth/outlook/callback.",
+  },
+  {
+    name: "X",
+    keys: "X_CLIENT_ID · X_CLIENT_SECRET",
+    steps: "Create an app in the X developer portal, turn on OAuth 2.0 with read + DM access, and set the redirect URI to your-site/auth/x/callback.",
+  },
+  {
+    name: "WhatsApp Business",
+    keys: "WHATSAPP_APP_ID · WHATSAPP_APP_SECRET",
+    steps: "Create a Meta app, add the WhatsApp product, connect your business number, and set the redirect URI to your-site/auth/whatsapp/callback.",
+  },
+  {
+    name: "Messenger",
+    keys: "MESSENGER_APP_ID · MESSENGER_APP_SECRET",
+    steps: "Create a Meta app, add the Messenger product on your Page with pages_messaging permission, and set the redirect URI to your-site/auth/messenger/callback.",
+  },
+];
 
 export function ConnectApps({
   email,
-  gmailConnected,
-  instagramConnected,
-  instagramConfigured,
-  supabaseConfigured,
+  signedIn,
+  connected,
+  configured,
   authNotice,
 }: {
   email: string | null;
-  gmailConnected: boolean;
-  instagramConnected: boolean;
-  instagramConfigured: boolean;
-  supabaseConfigured: boolean;
+  signedIn: boolean;
+  connected: Record<InboxId, boolean>;
+  configured: Record<InboxId, boolean>;
   authNotice: string | null;
 }) {
   const reduce = useReducedMotion();
@@ -52,38 +89,69 @@ export function ConnectApps({
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const live = [
+  const inboxes: Array<{
+    id: InboxId;
+    mark: string;
+    name: string;
+    detail: string;
+    live: boolean;
+    href: string;
+    connectLabel: string;
+  }> = [
     {
-      name: "Gmail",
+      id: "gmail",
       mark: "✉",
-      detail: "Brand email, connected in one tap. Signing in also creates your account.",
-      hint: "Gmail is the account. Everything else attaches to it.",
-      status: gmailConnected ? "Connected" : "Ready",
-      action: gmailConnected
-        ? null
-        : supabaseConfigured
-          ? { href: "/auth/sign-in", label: "Connect Gmail" }
-          : { href: "", label: "Coming soon", disabled: true },
+      name: "Gmail",
+      detail: "Brand email, connected in one tap. Also signs you in if you're new.",
+      live: true,
+      href: "/auth/sign-in",
+      connectLabel: "Connect Gmail",
     },
     {
-      name: "Instagram",
+      id: "instagram",
       mark: "◉",
+      name: "Instagram",
       detail: "Your DMs, on a professional account — with access you approve.",
-      hint: "A professional account is required.",
-      status: instagramConnected ? "Connected" : instagramConfigured && email ? "Ready" : "After Gmail",
-      action: instagramConnected
-        ? null
-        : email && instagramConfigured
-          ? { href: "/auth/instagram", label: "Connect Instagram" }
-          : { href: "", label: email ? "Coming soon" : "Connect Gmail first", disabled: true },
+      live: true,
+      href: "/auth/instagram",
+      connectLabel: "Connect Instagram",
     },
-  ];
-
-  const soon = [
-    { name: "WhatsApp Business", detail: "Your business inbox." },
-    { name: "Outlook", detail: "Brand mail on Outlook and Hotmail." },
-    { name: "X", detail: "Direct messages." },
-    { name: "Messenger", detail: "Your Page inbox." },
+    {
+      id: "whatsapp",
+      mark: "✆",
+      name: "WhatsApp Business",
+      detail: "Your business inbox.",
+      live: false,
+      href: "/auth/whatsapp",
+      connectLabel: "Connect WhatsApp",
+    },
+    {
+      id: "outlook",
+      mark: "▦",
+      name: "Outlook",
+      detail: "Brand mail on Outlook and Hotmail.",
+      live: false,
+      href: "/auth/outlook",
+      connectLabel: "Connect Outlook",
+    },
+    {
+      id: "x",
+      mark: "𝕏",
+      name: "X",
+      detail: "Direct messages.",
+      live: false,
+      href: "/auth/x",
+      connectLabel: "Connect X",
+    },
+    {
+      id: "messenger",
+      mark: "💬",
+      name: "Messenger",
+      detail: "Your Page inbox.",
+      live: false,
+      href: "/auth/messenger",
+      connectLabel: "Connect Messenger",
+    },
   ];
 
   return (
@@ -109,6 +177,14 @@ export function ConnectApps({
             <a href="/#letter" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white sm:inline">Live read</a>
             <a href="/#rates" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white md:inline">Rate engine</a>
             <Link href="/connect" className="rounded-lg px-3 py-2 font-medium text-white">Inboxes</Link>
+            {signedIn ? (
+              <>
+                <span className="hidden max-w-40 truncate px-2 text-xs text-[#f6f1e8]/50 xl:inline">{email}</span>
+                <a href="/auth/sign-out" className="rounded-lg px-3 py-2 text-[#f6f1e8]/70 hover:text-white">Sign out</a>
+              </>
+            ) : (
+              <Link href="/login" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Sign in</Link>
+            )}
             <Link href="/deals" className="ml-1 whitespace-nowrap rounded-full bg-[#f6f1e8] px-3.5 py-2 font-medium text-[#14110e] hover:bg-white">Open desk</Link>
           </nav>
         </div>
@@ -129,8 +205,8 @@ export function ConnectApps({
           transition={{ delay: 0.2, duration: 0.5, ease }}
           className="mt-4 max-w-xl text-base leading-7 text-[#f6f1e8]/65"
         >
-          {email ? <span className="text-[#f6f1e8]">Signed in as {email}. </span> : ""}
-          After each inbox connects you land back here — add another, or skip straight to the desk.
+          {signedIn && email ? <span className="text-[#f6f1e8]">Signed in as {email}. </span> : ""}
+          Every inbox is optional — connect only the ones you use. After each one connects you land back here, or skip straight to the desk.
         </motion.p>
 
         <motion.ol
@@ -140,8 +216,8 @@ export function ConnectApps({
           className="mt-6 grid grid-cols-3 gap-2"
         >
           {[
-            ["01 · Connect", true],
-            ["02 · Desk reads", false],
+            ["01 · Sign in", signedIn],
+            ["02 · Add inboxes", false],
             ["03 · You approve", false],
           ].map(([label, on]) => (
             <motion.li
@@ -154,48 +230,101 @@ export function ConnectApps({
           ))}
         </motion.ol>
 
-        <div className="mt-10 grid gap-3">
-          {live.map((card, index) => (
-            <motion.div
-              key={card.name}
-              initial={reduce ? false : { opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 + index * 0.07, duration: 0.5, ease }}
-              whileHover={reduce ? undefined : { y: -3 }}
-            >
-              <InboxCard
-                {...card}
-                onDisabled={() => setToast(card.name === "Instagram"
-                  ? "Connect Gmail first. That creates your account."
-                  : "Sign-in isn't set up yet. Please come back in a bit.")}
-              />
-            </motion.div>
-          ))}
-        </div>
+        {!signedIn ? (
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.34, duration: 0.5, ease }}
+            className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4"
+          >
+            <p className="text-sm text-[#f6f1e8]/70">Sign in first — it only creates your account, it connects nothing.</p>
+            <a href="/auth/login" className="rounded-full bg-[#f6f1e8] px-4 py-2.5 text-sm font-semibold text-[#14110e] transition hover:bg-white">Sign in with Google</a>
+          </motion.div>
+        ) : null}
 
-        <div className="mt-10 flex items-center gap-3">
-          <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f6f1e8]/40">Coming soon</p>
-          <div className="h-px flex-1 bg-white/10" />
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {soon.map((card, index) => (
-            <motion.div
-              key={card.name}
-              initial={reduce ? false : { opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + index * 0.05, duration: 0.45, ease }}
-              whileHover={reduce ? undefined : { y: -3 }}
-              className="group rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4 transition hover:border-[#ff5a36]/30"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="font-serif text-xl tracking-tight">{card.name}</h2>
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-[#f6f1e8]/60 transition group-hover:bg-[#ff5a36]/20 group-hover:text-[#ff5a36]">Soon</span>
-              </div>
-              <p className="mt-1 text-sm text-[#f6f1e8]/50">{card.detail}</p>
-            </motion.div>
-          ))}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {inboxes.map((inbox, index) => {
+            const isConnected = connected[inbox.id];
+            const isConfigured = configured[inbox.id];
+            const status = isConnected ? "Connected" : inbox.live ? (isConfigured ? "Ready" : "Setup needed") : "Soon";
+            const needsSignIn = !signedIn && inbox.id === "instagram";
+            const action = isConnected
+              ? null
+              : needsSignIn
+                ? { href: "/login", label: "Sign in first" }
+                : inbox.live && isConfigured
+                  ? { href: inbox.href, label: inbox.connectLabel }
+                  : inbox.live
+                    ? { href: "", label: "Setup needed", disabled: true as const }
+                    : isConfigured
+                      ? { href: inbox.href, label: inbox.connectLabel }
+                      : { href: "", label: "Soon", disabled: true as const };
+            return (
+              <motion.div
+                key={inbox.id}
+                initial={reduce ? false : { opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + index * 0.05, duration: 0.45, ease }}
+                whileHover={reduce ? undefined : { y: -3 }}
+                className={`group rounded-2xl border px-5 py-4 transition ${isConnected ? "border-[#ff5a36]/45 bg-[#ff5a36]/[0.07]" : "border-white/10 bg-white/[0.02] hover:border-[#ff5a36]/30"}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-base ${isConnected ? "bg-[#ff5a36] text-[#14110e]" : "bg-white/8 text-[#f6f1e8]"}`}>
+                      {inbox.mark}
+                    </span>
+                    <h2 className="truncate font-serif text-xl tracking-tight">{inbox.name}</h2>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${isConnected ? "bg-[#ff5a36] font-semibold text-[#14110e]" : status === "Ready" ? "bg-emerald-400/15 text-emerald-300" : "bg-white/10 text-[#f6f1e8]/60"}`}>
+                    {status}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-[#f6f1e8]/50">{inbox.detail}</p>
+                <div className="mt-3">
+                  {action ? (
+                    action.disabled ? (
+                      <button
+                        className="w-full rounded-full border border-white/15 px-4 py-2 text-sm text-[#f6f1e8]/70 transition hover:border-white/30"
+                        type="button"
+                        onClick={() => setToast(setupHints[inbox.id])}
+                      >
+                        {action.label}
+                      </button>
+                    ) : (
+                      <a
+                        className="block rounded-full bg-[#f6f1e8] px-4 py-2 text-center text-sm font-semibold text-[#14110e] transition hover:bg-white"
+                        href={action.href}
+                      >
+                        {action.label}
+                      </a>
+                    )
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#ff5a36]">
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-[#ff5a36] text-xs text-[#14110e]">✓</span> Added
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
         <p className="mt-4 text-center text-xs text-[#f6f1e8]/35">One desk for every inbox — so you stop checking six apps.</p>
+
+        <details className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4">
+          <summary className="cursor-pointer text-sm font-semibold">How a “Soon” inbox goes live</summary>
+          <div className="mt-3 space-y-3">
+            {setupNotes.map((note) => (
+              <div key={note.name} className="rounded-xl bg-white/[0.03] p-3">
+                <p className="text-sm font-semibold">{note.name}</p>
+                <p className="mt-0.5 font-mono text-[11px] text-[#ff5a36]/90">{note.keys}</p>
+                <p className="mt-1 text-xs leading-5 text-[#f6f1e8]/55">{note.steps}</p>
+              </div>
+            ))}
+            <p className="text-xs leading-5 text-[#f6f1e8]/45">
+              Then run <span className="font-mono">supabase/migrations/0003_channels.sql</span> once in the Supabase SQL editor — it stores the new tokens next to Gmail and Instagram.
+            </p>
+          </div>
+        </details>
 
         <motion.div
           initial={reduce ? false : { opacity: 0 }}
@@ -224,58 +353,5 @@ export function ConnectApps({
         ) : null}
       </AnimatePresence>
     </div>
-  );
-}
-
-function InboxCard({
-  name,
-  mark,
-  detail,
-  hint,
-  status,
-  action,
-  onDisabled,
-}: {
-  name: string;
-  mark: string;
-  detail: string;
-  hint: string;
-  status: string;
-  action?: { href: string; label: string; disabled?: boolean } | null;
-  onDisabled?: () => void;
-}) {
-  const connected = status === "Connected";
-  return (
-    <article className={`relative overflow-hidden rounded-3xl border px-5 py-5 transition sm:flex sm:items-center sm:justify-between sm:gap-6 ${connected ? "border-[#ff5a36]/45 bg-[#ff5a36]/[0.07]" : "border-white/10 bg-[#1c1814]"}`}>
-      {connected ? <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-[#ff5a36]/20 blur-[50px]" /> : null}
-      <div className="flex items-start gap-4">
-        <motion.span
-          animate={{ scale: [1, 1.06, 1] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-          className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-lg ${connected ? "bg-[#ff5a36] text-[#14110e]" : "bg-white/8 text-[#f6f1e8]"}`}
-        >
-          {mark}
-        </motion.span>
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-serif text-2xl tracking-tight">{name}</h2>
-            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${connected ? "bg-[#ff5a36] text-[#14110e]" : "bg-white/10 text-[#f6f1e8]/70"}`}>{status}</span>
-          </div>
-          <p className="mt-1 max-w-md text-sm leading-6 text-[#f6f1e8]/55">{detail}</p>
-          <p className="mt-1 text-xs text-[#f6f1e8]/35">{hint}</p>
-        </div>
-      </div>
-      <div className="mt-4 shrink-0 sm:mt-0">
-        {action ? (
-          action.disabled ? (
-            <button className="w-full rounded-full border border-white/15 px-4 py-2.5 text-sm text-[#f6f1e8]/70 sm:w-auto" type="button" onClick={onDisabled}>{action.label}</button>
-          ) : (
-            <a className="block rounded-full bg-[#f6f1e8] px-4 py-2.5 text-center text-sm font-semibold text-[#14110e] transition hover:bg-white" href={action.href}>{action.label}</a>
-          )
-        ) : connected ? (
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#ff5a36]"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#ff5a36] text-xs text-[#14110e]">✓</span> Added</span>
-        ) : null}
-      </div>
-    </article>
   );
 }

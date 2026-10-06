@@ -148,7 +148,7 @@ export function Inbox({
       "instagram-mismatch": "Instagram sign-in expired. Connect it again.",
       "instagram-failed": "Instagram did not finish connecting. Use a professional account and allow message access.",
       "needs-instagram-sql": "Run supabase/migrations/0002_instagram.sql in the Supabase SQL editor, then connect Instagram again.",
-      "sign-in-first": "Sign in with Google first, then connect Instagram.",
+      "sign-in-first": "Sign in first, then connect Instagram. Every inbox is optional.",
       "instagram-localhost": "Open the https tunnel address, sign in there, then connect Instagram. Localhost is not a valid Instagram redirect.",
     };
     if (authNotice === "instagram") setInstagramReady(true);
@@ -373,7 +373,7 @@ export function Inbox({
   const banner = email
     ? email
     : supabaseConfigured
-      ? "Sign in to read Gmail. Connect a professional Instagram account for DMs."
+      ? "Sign in, connect the inboxes you use, then press Sync."
       : "Add Supabase and Google in .env before connecting an inbox.";
 
   const messageCount = conversations.filter((conversation) => matches(conversation, "messages")).length;
@@ -406,7 +406,7 @@ export function Inbox({
               {syncing ? "Reading…" : "Sync"}
             </button>
           ) : (
-            <a className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#14110e]" href="/connect"><span className="sm:hidden">Connect</span><span className="hidden sm:inline">Connect inboxes</span></a>
+            <a className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#14110e]" href="/login"><span className="sm:hidden">Sign in</span><span className="hidden sm:inline">Sign in to sync</span></a>
           )}
           {email ? <a className="hidden rounded-full px-2 py-1.5 text-sm text-[#f6f1e8]/50 hover:text-white sm:inline" href="/auth/sign-out">Sign out</a> : null}
         </nav>

@@ -1,5 +1,13 @@
 import { ConnectApps } from "@/components/ConnectApps";
-import { instagramConfig, publicConfig } from "@/lib/config";
+import {
+  instagramConfig,
+  messengerConfig,
+  outlookConfig,
+  publicConfig,
+  whatsappConfig,
+  xConfig,
+} from "@/lib/config";
+import { hasGmailConnection } from "@/lib/gmail-status";
 import { hasInstagramConnection } from "@/lib/instagram-status";
 import { getViewer } from "@/lib/viewer";
 
@@ -12,15 +20,29 @@ export default async function ConnectPage({
 }) {
   const params = await searchParams;
   const viewer = await getViewer();
+  const gmailConnected = viewer ? await hasGmailConnection(viewer.id) : false;
   const instagramConnected = viewer ? await hasInstagramConnection(viewer.id) : false;
 
   return (
     <ConnectApps
       email={viewer?.email ?? null}
-      gmailConnected={Boolean(viewer)}
-      instagramConnected={instagramConnected}
-      instagramConfigured={instagramConfig().configured}
-      supabaseConfigured={publicConfig().configured}
+      signedIn={Boolean(viewer)}
+      connected={{
+        gmail: gmailConnected,
+        instagram: instagramConnected,
+        whatsapp: false,
+        outlook: false,
+        x: false,
+        messenger: false,
+      }}
+      configured={{
+        gmail: publicConfig().configured,
+        instagram: instagramConfig().configured,
+        whatsapp: whatsappConfig().configured,
+        outlook: outlookConfig().configured,
+        x: xConfig().configured,
+        messenger: messengerConfig().configured,
+      }}
       authNotice={params.auth ?? null}
     />
   );

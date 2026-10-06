@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/connect?auth=instagram-unconfigured`);
   }
   const viewer = await getViewer();
-  if (!viewer) return NextResponse.redirect(`${origin}/connect?auth=sign-in-first`);
+  if (!viewer) return NextResponse.redirect(`${origin}/login?error=sign-in-first`);
 
   const state = crypto.randomUUID();
   const response = NextResponse.redirect(
