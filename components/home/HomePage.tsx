@@ -185,7 +185,7 @@ function Hero({ reduce }: { reduce: boolean }) {
   return (
     <section className="mx-auto max-w-6xl px-6 pb-14 pt-32 text-center md:pt-40">
       <h1 className="mx-auto mt-7 max-w-4xl font-serif text-[2.9rem] leading-[0.95] tracking-tight sm:text-7xl md:text-[5.6rem]">
-        <span className="block overflow-hidden">
+        <span className="block overflow-hidden pb-2">
           <motion.span className="block" initial={reduce ? false : { y: "108%" }} animate={{ y: "0%" }} transition={{ duration: 0.85, ease }}>
             Turn brand messages
           </motion.span>
