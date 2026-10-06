@@ -211,3 +211,38 @@ export async function fetchInstagramConversations(
   }
   return conversations;
 }
+
+export async function instagramThreadSender(token: string, conversationId: string): Promise<string> {
+  const profile = await instagramProfile(token);
+  const ownIds = new Set([profile.id, profile.user_id].filter((id): id is string => Boolean(id)));
+  const ownUsername = profile.username ?? null;
+  const raw = await loadMessages(conversationId, token);
+  const them = raw.find((message) => message.from?.id && !isOwn(message.from, ownIds, ownUsername))?.from;
+  if (!them?.id) {
+    throw new Error("Could not find who to reply to. Sync Instagram again, then retry.");
+  }
+  return them.id;
+}
+
+export async function sendInstagramMessage(token: string, recipientId: string, text: string) {
+  const url = new URL(`${GRAPH}/me/messages`);
+  url.searchParams.set("access_token", token);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: { text },
+    }),
+  });
+  const body = (await response.json().catch(() => null)) as {
+    error?: { message?: string; code?: number };
+  } | null;
+  if (!response.ok) {
+    if (body?.error?.code === 190) {
+      throw new Error("Instagram access expired. Connect Instagram again.");
+    }
+    throw new Error((body?.error?.message || "Instagram did not send the reply.").slice(0, 220));
+  }
+}

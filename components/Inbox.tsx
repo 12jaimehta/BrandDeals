@@ -119,6 +119,7 @@ export function Inbox({
   const [sources, setSources] = useState<Record<SourceKey, boolean>>({ gmail: true, instagram: true });
   const [autoSync, setAutoSync] = useState(true);
   const [followers, setFollowers] = useState<number | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [grokDrafts, setGrokDrafts] = useState<Record<string, string>>({});
   const [drafting, setDrafting] = useState(false);
   const [pane, setPane] = useState<"list" | "thread" | "deal">("list");
@@ -238,7 +239,7 @@ export function Inbox({
       const first = (body.conversations ?? []).find((item: InboxConversation) => readingFor(item).isBrandOpportunity);
       if (first) setSelectedId(first.id);
       const noun = body.brandDeals === 1 ? "brand deal" : "brand deals";
-      const warning = body.modelErrors ? ` OpenAI missed ${body.modelErrors}, so the rules reader filled those.` : "";
+      const warning = body.modelErrors ? ` Checked ${body.modelErrors} with the backup reader.` : "";
       if (!quiet) setToast(`Read Gmail. ${body.brandDeals} ${noun}.${warning}`);
     } catch {
       if (!quiet) setToast("Gmail sync failed.");
@@ -265,7 +266,7 @@ export function Inbox({
       const first = incoming.find((item) => readingFor(item).isBrandOpportunity);
       if (first) setSelectedId(first.id);
       const noun = body.brandDeals === 1 ? "brand deal" : "brand deals";
-      const warning = body.modelErrors ? ` OpenAI missed ${body.modelErrors}, so the rules reader filled those.` : "";
+      const warning = body.modelErrors ? ` Checked ${body.modelErrors} with the backup reader.` : "";
       if (!quiet) setToast(`Read Instagram. ${body.brandDeals} ${noun}.${warning}`);
     } catch {
       if (!quiet) setToast("Instagram sync failed.");
@@ -333,11 +334,39 @@ export function Inbox({
         return;
       }
       setGrokDrafts((current) => ({ ...current, [conversation.id]: body.draft }));
-      setToast(body.reader === "grok" ? "Grok wrote a draft. Copy it when you approve it." : body.modelError || "Rules draft is ready. Copy it when you approve it.");
+      setToast(body.reader === "grok" ? "Fresh draft is ready. Copy it when you approve it." : body.modelError || "Draft is ready. Copy it when you approve it.");
     } catch {
       setToast("The draft failed.");
     } finally {
       setDrafting(false);
+    }
+  }
+
+  async function sendReply(conversation: InboxConversation, text: string) {
+    if (sendingId) return;
+    setSendingId(conversation.id);
+    try {
+      const response = await fetch("/api/reply/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: conversation.id, text }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        setToast(body.error || "The reply was not sent.");
+        return;
+      }
+      const sent = { from: "you" as const, at: body.at ?? new Date().toISOString(), text };
+      setConversations((current) =>
+        current.map((item) =>
+          item.id === conversation.id ? { ...item, messages: [...item.messages, sent] } : item,
+        ),
+      );
+      setToast(conversation.source === "gmail" ? "Sent via Gmail." : "Sent as your Instagram account.");
+    } catch {
+      setToast("The reply was not sent.");
+    } finally {
+      setSendingId(null);
     }
   }
 
@@ -357,38 +386,39 @@ export function Inbox({
   ] as const;
 
   return (
-    <div className="flex h-dvh min-w-0 flex-col overflow-hidden bg-[#f3eee6] text-[#1a1410]">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#1a1410] px-4 text-[#f6f1e8] md:px-5">
+    <div className="relative flex h-dvh min-w-0 flex-col overflow-hidden bg-[#14110e] text-[#f6f1e8]">
+      <div className="site-grain" aria-hidden="true" />
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#14110e]/90 px-4 backdrop-blur md:px-5">
         <a href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#1a1410]">B</span>
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#14110e]">B</span>
           <span className="truncate font-serif text-lg leading-none tracking-tight">Brand Deal Inbox</span>
         </a>
-        <div className="ml-auto flex items-center gap-2">
+        <nav className="ml-auto flex items-center gap-2">
           {email ? (
-            <label className="mr-1 hidden items-center gap-2 text-xs text-[#f6f1e8]/70 lg:flex">
+            <label className="mr-1 hidden items-center gap-2 text-xs text-[#f6f1e8]/60 lg:flex">
               <input className="h-4 w-4 accent-[#ff5a36]" type="checkbox" checked={autoSync} onChange={(event) => toggleAuto(event.target.checked)} />
               Auto sync
             </label>
           ) : null}
-          <a className="rounded-full px-3 py-1.5 text-sm text-[#f6f1e8]/80 hover:text-white" href="/connect">Inboxes</a>
+          <a className="rounded-full px-3 py-1.5 text-sm text-[#f6f1e8]/75 transition hover:text-white" href="/connect">Inboxes</a>
           {email ? (
-            <button className="rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#1a1410] disabled:opacity-50" type="button" onClick={() => void syncAll()} disabled={syncing != null}>
-              {syncing ? "Reading" : "Sync"}
+            <button className="rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#14110e] transition hover:bg-[#ff7a5c] disabled:opacity-50" type="button" onClick={() => void syncAll()} disabled={syncing != null}>
+              {syncing ? "Reading…" : "Sync"}
             </button>
           ) : (
-            <a className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#1a1410]" href="/connect"><span className="sm:hidden">Connect</span><span className="hidden sm:inline">Connect inboxes</span></a>
+            <a className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#14110e]" href="/connect"><span className="sm:hidden">Connect</span><span className="hidden sm:inline">Connect inboxes</span></a>
           )}
-          {email ? <a className="hidden rounded-full px-2 py-1.5 text-sm text-[#f6f1e8]/60 hover:text-white sm:inline" href="/auth/sign-out">Sign out</a> : null}
-        </div>
+          {email ? <a className="hidden rounded-full px-2 py-1.5 text-sm text-[#f6f1e8]/50 hover:text-white sm:inline" href="/auth/sign-out">Sign out</a> : null}
+        </nav>
       </header>
 
       <div className="grid min-h-0 min-w-0 flex-1 overflow-hidden md:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className={`${pane === "list" ? "flex" : "hidden"} min-h-0 min-w-0 flex-col border-[#1a1410]/10 md:flex md:border-r`}>
-          <div className="shrink-0 space-y-3 border-b border-[#1a1410]/10 px-3 py-3">
-            <p className="line-clamp-2 text-xs leading-5 text-[#1a1410]/55">{banner}</p>
+        <aside className={`${pane === "list" ? "flex" : "hidden"} min-h-0 min-w-0 flex-col border-white/10 md:flex md:border-r`}>
+          <div className="shrink-0 space-y-3 border-b border-white/10 px-3 py-3">
+            <p className="line-clamp-2 text-xs leading-5 text-[#f6f1e8]/50">{banner}</p>
             <div className="flex flex-wrap gap-1.5">
               {filters.map(([id, label, count]) => (
-                <button key={id} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${filter === id ? "bg-[#1a1410] text-[#f6f1e8]" : "bg-white/70 text-[#1a1410]/70"}`} type="button" onClick={() => chooseFilter(id)}>
+                <button key={id} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${filter === id ? "bg-[#f6f1e8] text-[#14110e]" : "bg-white/[0.06] text-[#f6f1e8]/60 hover:bg-white/10"}`} type="button" onClick={() => chooseFilter(id)}>
                   {label} {count}
                 </button>
               ))}
@@ -396,38 +426,39 @@ export function Inbox({
             <div className="flex flex-wrap items-center gap-1.5">
               <SourceChip label="Gmail" on={sources.gmail} onClick={() => toggleSource("gmail")} />
               <SourceChip label="Instagram" on={sources.instagram && instagramReady} disabled={!instagramReady} onClick={() => instagramReady ? toggleSource("instagram") : undefined} />
-              <a className="px-2 text-xs font-medium text-[#1a1410]/50 underline" href="/connect">Add</a>
+              <a className="px-2 text-xs font-medium text-[#f6f1e8]/45 underline hover:text-white" href="/connect">Add</a>
             </div>
           </div>
-          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-2">
             {visible.length ? visible.map((conversation) => {
               const extraction = readingFor(conversation);
               const action = actionFor(conversation.id);
               const active = selected?.id === conversation.id;
               const unread = !action.seen && extraction.isBrandOpportunity;
               return (
-                <button key={conversation.id} className={`block w-full border-b border-[#1a1410]/8 px-4 py-3.5 text-left ${active ? "bg-white" : "hover:bg-white/50"}`} type="button" onClick={() => select(conversation.id)}>
+                <motion.button key={conversation.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className={`mb-1.5 block w-full rounded-2xl border px-4 py-3.5 text-left transition ${active ? "border-transparent bg-[#f6f1e8] text-[#14110e] shadow-[0_16px_40px_-20px_rgba(246,241,232,0.5)]" : "border-white/8 bg-white/[0.02] hover:bg-white/[0.06]"}`} type="button" onClick={() => select(conversation.id)}>
                   <span className="flex items-center justify-between gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${conversation.source === "gmail" ? "bg-[#1a1410] text-[#f6f1e8]" : "bg-[#ff5a36] text-[#1a1410]"}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${conversation.source === "gmail" ? (active ? "bg-[#14110e] text-[#f6f1e8]" : "bg-white/10 text-[#f6f1e8]/75") : "bg-[#ff5a36] text-[#14110e]"}`}>
                       {conversation.source === "gmail" ? "Gmail" : "Instagram"}
                     </span>
-                    <span className="shrink-0 text-xs text-[#1a1410]/45">{formatDate(conversation.receivedAt)}</span>
+                    <span className={`shrink-0 text-xs ${active ? "text-[#14110e]/50" : "text-[#f6f1e8]/40"}`}>{formatDate(conversation.receivedAt)}</span>
                   </span>
                   <span className="mt-2 flex min-w-0 items-center gap-2">
-                    {unread ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff5a36]" /> : null}
+                    {unread && !active ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff5a36]" /> : null}
                     <span className="truncate text-sm font-semibold">{listTitle(conversation, extraction)}</span>
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-[#1a1410]/55">{listSubtitle(conversation, extraction)}</span>
-                  <span className="mt-1 block truncate text-xs text-[#1a1410]/45">{dealLine(extraction)}</span>
-                  {action.followUpAt && !action.followedUp ? <span className="mt-2 block text-[11px] font-semibold tracking-wide text-[#c2410c]">{followUpLabel(action)}</span> : null}
-                </button>
+                  <span className={`mt-0.5 block truncate text-xs ${active ? "text-[#14110e]/60" : "text-[#f6f1e8]/50"}`}>{listSubtitle(conversation, extraction)}</span>
+                  <span className={`mt-1 block truncate text-xs font-medium ${active ? "text-[#14110e]" : "text-[#ff5a36]/90"}`}>{dealLine(extraction)}</span>
+                  {action.followUpAt && !action.followedUp ? <span className={`mt-2 block text-[11px] font-semibold tracking-wide ${active ? "text-[#c2410c]" : "text-[#ff5a36]"}`}>{followUpLabel(action)}</span> : null}
+                </motion.button>
               );
             }) : (
-              <div className="px-4 py-10">
+              <div className="px-3 py-10">
                 <h2 className="font-serif text-2xl tracking-tight">{conversations.length ? "No brand deals here" : "No brand deals yet"}</h2>
-                <p className="mt-2 text-sm leading-6 text-[#1a1410]/55">
+                <p className="mt-2 text-sm leading-6 text-[#f6f1e8]/50">
                   {conversations.length ? "Another filter still has brand deals." : "Sync Gmail or Instagram. Only brand deals are listed."}
                 </p>
+                <a href="/connect" className="mt-4 inline-block rounded-full bg-[#f6f1e8] px-4 py-2 text-sm font-semibold text-[#14110e]">Connect an inbox</a>
               </div>
             )}
           </div>
@@ -474,6 +505,8 @@ export function Inbox({
           }}
           draftOverride={selected ? grokDrafts[selected.id] : undefined}
           drafting={drafting}
+          onSend={(draft) => { if (selected) void sendReply(selected, draft); }}
+          sending={selected ? sendingId === selected.id : false}
           followers={followers}
           onRewrite={() => { if (selected) void rewriteDraft(selected); }}
           onCopy={(draft) => {
@@ -496,7 +529,7 @@ export function Inbox({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="fixed bottom-5 left-1/2 z-30 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl bg-[#1a1410] px-4 py-3 text-sm text-[#f6f1e8] shadow-xl"
+            className="fixed bottom-5 left-1/2 z-30 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl bg-[#f6f1e8] px-4 py-3 text-sm text-[#14110e] shadow-xl"
             role="status"
             aria-live="polite"
           >
@@ -510,7 +543,7 @@ export function Inbox({
 
 function SourceChip({ label, on, onClick, disabled }: { label: string; on: boolean; onClick?: () => void; disabled?: boolean }) {
   return (
-    <button className={`rounded-full border px-3 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${on ? "border-[#1a1410] bg-[#1a1410] text-[#f6f1e8]" : "border-[#1a1410]/15 bg-transparent text-[#1a1410]/55"}`} type="button" onClick={onClick} disabled={disabled}>
+    <button className={`rounded-full border px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${on ? "border-transparent bg-[#ff5a36] text-[#14110e]" : "border-white/12 bg-transparent text-[#f6f1e8]/50 hover:border-white/25"}`} type="button" onClick={onClick} disabled={disabled}>
       {label}
     </button>
   );
@@ -519,27 +552,27 @@ function SourceChip({ label, on, onClick, disabled }: { label: string; on: boole
 function Thread({ conversation, onBack, onDeal }: { conversation: InboxConversation | null; onBack: () => void; onDeal: () => void }) {
   if (!conversation) {
     return (
-      <main className="grid flex-1 place-items-center px-8">
+      <main className="grid flex-1 place-items-center bg-[#14110e] px-8">
         <div className="max-w-md text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1a1410]/40">Inbox</p>
-          <h2 className="mt-3 font-serif text-4xl tracking-tight">Choose a thread</h2>
-          <p className="mt-3 text-sm leading-6 text-[#1a1410]/55">Sync Gmail or Instagram, then open a conversation. The deal card reads the terms beside it.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#f6f1e8]/35">Your desk</p>
+          <h2 className="mt-3 font-serif text-4xl tracking-tight text-white">Choose a thread</h2>
+          <p className="mt-3 text-sm leading-6 text-[#f6f1e8]/50">Sync Gmail or Instagram. The desk extracts the fee, prices the usage, and drafts the counter — you approve it.</p>
         </div>
       </main>
     );
   }
   const extraction = readingFor(conversation);
   return (
-    <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#f7f3ec]">
-      <header className="flex min-w-0 shrink-0 items-start justify-between gap-3 border-b border-[#1a1410]/10 px-5 py-4">
+    <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#14110e]">
+      <header className="flex min-w-0 shrink-0 items-start justify-between gap-3 border-b border-white/10 px-5 py-4">
         <div className="min-w-0">
-          <button className="mb-3 rounded-full border border-[#1a1410]/15 px-3 py-1 text-sm md:hidden" type="button" onClick={onBack}>Back</button>
+          <button className="mb-3 rounded-full border border-white/15 px-3 py-1 text-sm text-[#f6f1e8]/75 md:hidden" type="button" onClick={onBack}>Back</button>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff5a36]">{conversation.source === "gmail" ? "Gmail thread" : "Instagram DM"}</p>
-          <h2 className="mt-1 break-words font-serif text-3xl tracking-tight">{conversation.fromName}</h2>
-          <p className="mt-1 break-all text-sm text-[#1a1410]/50">{conversation.fromHandle}</p>
-          {conversation.subject ? <p className="mt-3 break-words text-sm font-medium">{conversation.subject}</p> : null}
+          <h2 className="mt-1 break-words font-serif text-3xl tracking-tight text-white">{conversation.fromName}</h2>
+          <p className="mt-1 break-all text-sm text-[#f6f1e8]/45">{conversation.fromHandle}</p>
+          {conversation.subject ? <p className="mt-3 break-words text-sm font-medium text-[#f6f1e8]/75">{conversation.subject}</p> : null}
         </div>
-        <button className="shrink-0 rounded-full bg-[#1a1410] px-3 py-1.5 text-xs font-semibold text-[#f6f1e8] lg:hidden" type="button" onClick={onDeal}>The deal</button>
+        <button className="shrink-0 rounded-full bg-[#f6f1e8] px-3 py-1.5 text-xs font-semibold text-[#14110e] lg:hidden" type="button" onClick={onDeal}>The deal</button>
       </header>
       <AnimatePresence mode="wait">
         <motion.div
@@ -551,12 +584,12 @@ function Thread({ conversation, onBack, onDeal }: { conversation: InboxConversat
           className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto px-5 py-5"
         >
           {conversation.messages.map((message, index) => (
-            <article className={`min-w-0 max-w-full rounded-2xl px-4 py-3 text-sm leading-6 ${message.from === "you" ? "ml-auto max-w-xl bg-[#1a1410] text-[#f6f1e8]" : "bg-white"}`} key={`${message.at}-${index}`}>
+            <article className={`min-w-0 max-w-full rounded-2xl px-4 py-3 text-sm leading-6 ${message.from === "you" ? "ml-auto max-w-xl bg-[#f6f1e8] text-[#14110e]" : "border border-white/8 bg-white/[0.05] text-[#f6f1e8]/90"}`} key={`${message.at}-${index}`}>
               <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.text}</p>
-              <p className={`mt-2 text-xs ${message.from === "you" ? "text-[#f6f1e8]/50" : "text-[#1a1410]/40"}`}>{formatWhen(message.at)}</p>
+              <p className={`mt-2 text-xs ${message.from === "you" ? "text-[#14110e]/50" : "text-[#f6f1e8]/40"}`}>{formatWhen(message.at)}</p>
             </article>
           ))}
-          <p className="text-sm text-[#1a1410]/50">{extraction.detectionReason}</p>
+          <p className="text-sm text-[#f6f1e8]/40">{extraction.detectionReason}</p>
         </motion.div>
       </AnimatePresence>
     </main>
@@ -578,6 +611,8 @@ function Deal({
   onCopy,
   draftOverride,
   drafting,
+  onSend,
+  sending,
   followers,
   onRewrite,
 }: {
@@ -595,19 +630,23 @@ function Deal({
   onCopy: (draft: string) => void;
   draftOverride?: string;
   drafting: boolean;
+  onSend: (draft: string) => void;
+  sending: boolean;
   followers: number | null;
   onRewrite: () => void;
 }) {
-  const shell = "flex h-full min-h-0 min-w-0 w-full flex-col overflow-x-hidden overflow-y-auto border-[#1a1410]/10 bg-[#fffaf3] lg:border-l";
+  const [confirmSend, setConfirmSend] = useState(false);
+  useEffect(() => { setConfirmSend(false); }, [conversation?.id]);
+  const shell = "flex h-full min-h-0 min-w-0 w-full flex-col overflow-x-hidden overflow-y-auto border-white/10 bg-[#f6f1e8] text-[#14110e] lg:border-l";
   if (!conversation) return <aside className={shell} />;
   const extraction = readingFor(conversation);
   if (!extraction.isBrandOpportunity) {
     return (
       <aside className={`${shell} px-6 py-8`}>
-        <button className="mb-4 rounded-full border border-[#1a1410]/15 px-3 py-1 text-sm lg:hidden" type="button" onClick={onBack}>Back to the thread</button>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1a1410]/40">Reader</p>
+        <button className="mb-4 rounded-full border border-[#14110e]/15 px-3 py-1 text-sm lg:hidden" type="button" onClick={onBack}>Back to the thread</button>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#14110e]/40">Reader</p>
         <h2 className="mt-2 font-serif text-3xl tracking-tight">No brand deal here</h2>
-        <p className="mt-3 text-sm leading-6 text-[#1a1410]/55">{extraction.detectionReason}</p>
+        <p className="mt-3 text-sm leading-6 text-[#14110e]/55">{extraction.detectionReason}</p>
       </aside>
     );
   }
@@ -645,23 +684,23 @@ function Deal({
 
   return (
     <aside className={shell} aria-live="polite">
-      <div className="sticky top-0 z-10 border-b border-[#1a1410]/10 bg-[#fffaf3] px-5 py-5">
-        <button className="mb-3 rounded-full border border-[#1a1410]/15 px-3 py-1 text-sm lg:hidden" type="button" onClick={onBack}>Back to the thread</button>
+      <div className="sticky top-0 z-10 border-b border-[#14110e]/10 bg-[#f6f1e8] px-5 py-5">
+        <button className="mb-3 rounded-full border border-[#14110e]/15 px-3 py-1 text-sm lg:hidden" type="button" onClick={onBack}>Back to the thread</button>
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff5a36]">The deal</p>
         <h2 className="mt-1 break-words font-serif text-3xl tracking-tight">{extraction.brand || extraction.campaign || "Untitled deal"}</h2>
       </div>
-      <motion.div key={conversation.id} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35 }} className="space-y-5 px-5 py-5">
-        <section className="rounded-2xl bg-orange-50 px-4 py-4">
-          <p className="text-sm text-orange-950/70">{lead}</p>
-          <p className="mt-1 font-serif text-2xl leading-tight tracking-tight text-orange-950">{main}</p>
-          {advice.suggestedOffer != null && advice.usageAmount > 0 ? <p className="mt-3 text-sm font-semibold">Suggested counter {formatINR(advice.suggestedOffer)}</p> : null}
-          {underFloor ? <p className="mt-2 text-sm text-orange-950/80">Under your {formatINR(rules.minimumOffer)} minimum. It sits in Below your rate.</p> : null}
-          {unpriced ? <p className="mt-2 text-sm text-orange-950/80">No fee was stated. The reply asks for the budget and names your {formatINR(rules.minimumOffer)} minimum.</p> : null}
-          {extraction.exclusivityDays != null && extraction.exclusivityDays > 0 && advice.exclusivityAmount > 0 ? <p className="mt-2 text-sm text-orange-950/80">{extraction.exclusivityDays}-day exclusivity adds {formatINR(advice.exclusivityAmount)}.</p> : null}
-          {extraction.exclusivityDays != null && extraction.exclusivityDays > 0 && advice.exclusivityAmount === 0 ? <p className="mt-2 text-sm text-orange-950/80">{extraction.exclusivityDays}-day exclusivity is in the ask. Your rules do not add a fee for it yet.</p> : null}
+      <motion.div key={conversation.id} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35 }} className="space-y-5 bg-[#f6f1e8] px-5 py-5">
+        <section className="rounded-2xl bg-[#14110e] px-4 py-4 text-[#f6f1e8]">
+          <p className="text-sm text-[#f6f1e8]/60">{lead}</p>
+          <p className="mt-1 font-serif text-2xl leading-tight tracking-tight">{main}</p>
+          {advice.suggestedOffer != null && advice.usageAmount > 0 ? <p className="mt-3 inline-block rounded-full bg-[#ff5a36] px-3 py-1 text-sm font-semibold text-[#14110e]">Suggested counter {formatINR(advice.suggestedOffer)}</p> : null}
+          {underFloor ? <p className="mt-2 text-sm text-[#f6f1e8]/70">Under your {formatINR(rules.minimumOffer)} minimum. It sits in Below your rate.</p> : null}
+          {unpriced ? <p className="mt-2 text-sm text-[#f6f1e8]/70">No fee was stated. The reply asks for the budget and names your {formatINR(rules.minimumOffer)} minimum.</p> : null}
+          {extraction.exclusivityDays != null && extraction.exclusivityDays > 0 && advice.exclusivityAmount > 0 ? <p className="mt-2 text-sm text-[#f6f1e8]/70">{extraction.exclusivityDays}-day exclusivity adds {formatINR(advice.exclusivityAmount)}.</p> : null}
+          {extraction.exclusivityDays != null && extraction.exclusivityDays > 0 && advice.exclusivityAmount === 0 ? <p className="mt-2 text-sm text-[#f6f1e8]/70">{extraction.exclusivityDays}-day exclusivity is in the ask. Your rules do not add a fee for it yet.</p> : null}
           {advice.blocks > 0 ? (
-            <details className="mt-3 text-sm text-orange-950/80">
-              <summary className="cursor-pointer font-medium">How this was counted</summary>
+            <details className="mt-3 text-sm text-[#f6f1e8]/70">
+              <summary className="cursor-pointer font-medium text-[#f6f1e8]">How this was counted</summary>
               <p className="mt-2">{extraction.usageRightsDays} days asked, {rules.usageIncludedDays} included.</p>
               <p>{advice.extraDays} extra days = {advice.blocks} × {formatINR(rules.usageUpliftPer30Days)} = {formatINR(advice.usageAmount)}.</p>
             </details>
@@ -670,25 +709,25 @@ function Deal({
 
         <FollowUp action={action} waitDays={waitDays} onFollow={onFollow} onDone={onDone} onClear={onClear} />
 
-        <dl className="divide-y divide-zinc-100 rounded-2xl border border-zinc-200">
+        <dl className="divide-y divide-[#14110e]/10 rounded-2xl border border-[#14110e]/12 bg-white">
           {fields.map(([label, value]) => (
             <div className="flex items-start justify-between gap-4 px-4 py-3 text-sm" key={label}>
-              <dt className="text-zinc-500">{label}</dt>
-              <dd className={`text-right font-medium ${value ? "" : "font-normal text-zinc-400"}`}>{value || "Not in the conversation"}</dd>
+              <dt className="text-[#14110e]/50">{label}</dt>
+              <dd className={`text-right font-medium ${value ? "" : "font-normal text-[#14110e]/35"}`}>{value || "Not in the conversation"}</dd>
             </div>
           ))}
         </dl>
 
-        {extraction.notes.length ? <ul className="space-y-1 text-sm text-zinc-500">{extraction.notes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
+        {extraction.notes.length ? <ul className="space-y-1 text-sm text-[#14110e]/55">{extraction.notes.map((note) => <li key={note}>{note}</li>)}</ul> : null}
         {extraction.gaps.length ? (
           <div>
             <h3 className="text-sm font-semibold">Still to confirm</h3>
-            <ul className="mt-2 flex flex-wrap gap-2">{extraction.gaps.map((gap) => <li className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-600" key={gap}>{gap}</li>)}</ul>
+            <ul className="mt-2 flex flex-wrap gap-2">{extraction.gaps.map((gap) => <li className="rounded-full bg-[#14110e]/8 px-2.5 py-1 text-xs text-[#14110e]/65" key={gap}>{gap}</li>)}</ul>
           </div>
-        ) : <p className="text-sm text-zinc-500">Every term in the brief was stated.</p>}
-        <p className="text-xs text-zinc-400">{extraction.detectionReason} {conversation.reader === "openai" ? "Read with OpenAI." : "Read with the rules reader."}</p>
+        ) : <p className="text-sm text-[#14110e]/55">Every term in the brief was stated.</p>}
+        <p className="text-xs text-[#14110e]/40">{extraction.detectionReason} Checked by AI.</p>
 
-        <details className="rounded-2xl border border-zinc-200 px-4 py-3" open={rulesOpen} onToggle={(event) => onRulesOpen(event.currentTarget.open)}>
+        <details className="rounded-2xl border border-[#14110e]/12 bg-white px-4 py-3" open={rulesOpen} onToggle={(event) => onRulesOpen(event.currentTarget.open)}>
           <summary className="cursor-pointer text-sm font-semibold">Your rate rules</summary>
           <div className="mt-3 grid gap-3">
             <Rule label="Usage already included, days" value={rules.usageIncludedDays} onChange={(value) => onRule("usageIncludedDays", value)} />
@@ -696,22 +735,34 @@ function Deal({
             <Rule label="Rupees per 30 days of exclusivity" value={rules.exclusivityUpliftPer30Days} onChange={(value) => onRule("exclusivityUpliftPer30Days", value)} />
             <Rule label="Minimum fee, rupees" value={rules.minimumOffer} onChange={(value) => onRule("minimumOffer", value)} />
             {audienceFloor != null ? (
-              <p className="text-xs leading-5 text-zinc-500">
+              <p className="text-xs leading-5 text-[#14110e]/55">
                 Instagram audience {new Intl.NumberFormat("en-IN").format(followers || 0)}. Starting minimum {formatINR(audienceFloor)}.
-                <button className="ml-2 font-semibold text-zinc-950 underline" type="button" onClick={() => onRule("minimumOffer", audienceFloor)}>Use it</button>
+                <button className="ml-2 font-semibold text-[#14110e] underline" type="button" onClick={() => onRule("minimumOffer", audienceFloor)}>Use it</button>
               </p>
-            ) : <p className="text-xs leading-5 text-zinc-500">0 keeps every priced deal in Brand deals. A missing fee always stays there.</p>}
+            ) : <p className="text-xs leading-5 text-[#14110e]/55">0 keeps every priced deal in Brand deals. A missing fee always stays there.</p>}
           </div>
         </details>
 
-        <section className="rounded-2xl bg-zinc-950 p-4 text-white">
-          <h3 className="text-sm font-semibold">{draftOverride ? "Grok draft" : "Suggested reply"}</h3>
-          <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-zinc-100">{draft}</pre>
-          <p className="mt-3 text-xs text-zinc-400">Nothing is sent. Copy it when you approve the wording.</p>
+        <section className="rounded-2xl bg-[#14110e] p-4 text-white">
+          <h3 className="text-sm font-semibold">{draftOverride ? "Fresh draft" : "Suggested reply"}</h3>
+          <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-[#f6f1e8]">{draft}</pre>
+          <p className="mt-3 text-xs text-[#f6f1e8]/50">Nothing is sent until you approve it — copy the draft, or press Send.</p>
+          {confirmSend ? (
+            <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-3">
+              <p className="text-xs leading-5 text-[#f6f1e8]/80">
+                Send this reply to {extraction.brand || conversation.fromName} via {conversation.source === "gmail" ? `Gmail (${conversation.fromHandle})` : "your Instagram account"}?
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="rounded-full bg-[#ff5a36] px-3 py-2 text-sm font-semibold text-[#14110e] transition hover:bg-[#ff7a5c] disabled:opacity-50" type="button" onClick={() => { setConfirmSend(false); onSend(draft); }} disabled={sending}>{sending ? "Sending…" : "Yes, send it"}</button>
+                <button className="rounded-full border border-white/20 px-3 py-2 text-sm" type="button" onClick={() => setConfirmSend(false)} disabled={sending}>Keep editing</button>
+              </div>
+            </div>
+          ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
-            <button className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-zinc-950 disabled:opacity-50" type="button" onClick={onRewrite} disabled={drafting}>{drafting ? "Writing" : "Rewrite with Grok"}</button>
-            <button className="rounded-lg border border-white/20 px-3 py-2 text-sm" type="button" onClick={() => onCopy(draft)}>Copy approved reply</button>
-            <button className="rounded-lg border border-white/20 px-3 py-2 text-sm" type="button" onClick={onAside}>Set aside</button>
+            <button className="rounded-full bg-[#ff5a36] px-3 py-2 text-sm font-semibold text-[#14110e] transition hover:bg-[#ff7a5c] disabled:opacity-50" type="button" onClick={() => setConfirmSend(true)} disabled={sending || drafting}>Send reply</button>
+            <button className="rounded-full border border-white/20 px-3 py-2 text-sm disabled:opacity-50" type="button" onClick={onRewrite} disabled={drafting || sending}>{drafting ? "Writing" : "Rewrite with AI"}</button>
+            <button className="rounded-full border border-white/20 px-3 py-2 text-sm" type="button" onClick={() => onCopy(draft)}>Copy approved reply</button>
+            <button className="rounded-full border border-white/20 px-3 py-2 text-sm" type="button" onClick={onAside}>Set aside</button>
           </div>
         </section>
       </motion.div>
@@ -722,33 +773,33 @@ function Deal({
 function FollowUp({ action, waitDays, onFollow, onDone, onClear }: { action: Action; waitDays: number; onFollow: () => void; onDone: () => void; onClear: () => void }) {
   if (action.followUpAt && !action.followedUp) {
     return (
-      <section className="rounded-2xl bg-zinc-950 px-4 py-4 text-white">
-        <p className="text-[11px] font-semibold tracking-[0.14em]">{followUpLabel(action)}</p>
+      <section className="rounded-2xl bg-[#14110e] px-4 py-4 text-white">
+        <p className="text-[11px] font-semibold tracking-[0.14em] text-[#ff5a36]">{followUpLabel(action)}</p>
         <p className="mt-1 font-serif text-3xl tracking-tight">{formatDate(action.followUpAt)}</p>
-        <p className="mt-1 text-xs text-zinc-400">Reminder on this device. Nothing is sent.</p>
+        <p className="mt-1 text-xs text-[#f6f1e8]/50">Reminder on this device. Nothing is sent.</p>
         <div className="mt-4 flex gap-2">
-          <button className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-zinc-950" type="button" onClick={onDone}>Mark followed up</button>
-          <button className="rounded-lg border border-white/20 px-3 py-2 text-sm" type="button" onClick={onClear}>Clear</button>
+          <button className="rounded-full bg-[#f6f1e8] px-3 py-2 text-sm font-semibold text-[#14110e]" type="button" onClick={onDone}>Mark followed up</button>
+          <button className="rounded-full border border-white/20 px-3 py-2 text-sm" type="button" onClick={onClear}>Clear</button>
         </div>
       </section>
     );
   }
   const noun = waitDays === 1 ? "day" : "days";
   return (
-    <section className="rounded-2xl bg-zinc-950 px-4 py-4 text-white">
-      <p className="text-[11px] font-semibold tracking-[0.14em]">FOLLOW UP IN {waitDays} {noun.toUpperCase()}</p>
+    <section className="rounded-2xl bg-[#14110e] px-4 py-4 text-white">
+      <p className="text-[11px] font-semibold tracking-[0.14em] text-[#ff5a36]">FOLLOW UP IN {waitDays} {noun.toUpperCase()}</p>
       <p className="mt-1 font-serif text-3xl tracking-tight">{formatDate(toISODate(addDays(waitDays)))}</p>
-      <p className="mt-1 text-xs text-zinc-400">{action.followedUp ? "You marked the last reminder done." : "A reminder on this device. Nothing is sent."}</p>
-      <button className="mt-4 rounded-lg bg-white px-3 py-2 text-sm font-medium text-zinc-950" type="button" onClick={onFollow}>Set reminder</button>
+      <p className="mt-1 text-xs text-[#f6f1e8]/50">{action.followedUp ? "You marked the last reminder done." : "A reminder on this device. Nothing is sent."}</p>
+      <button className="mt-4 rounded-full bg-[#f6f1e8] px-3 py-2 text-sm font-semibold text-[#14110e]" type="button" onClick={onFollow}>Set reminder</button>
     </section>
   );
 }
 
 function Rule({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return (
-    <label className="grid gap-1 text-xs text-zinc-600">
+    <label className="grid gap-1 text-xs text-[#14110e]/55">
       {label}
-      <input className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950" type="number" min={0} step={1} value={value} onChange={(event) => {
+      <input className="w-full rounded-xl border border-[#14110e]/12 bg-white px-3 py-2 text-sm text-[#14110e]" type="number" min={0} step={1} value={value} onChange={(event) => {
         const next = Number(event.target.value);
         if (Number.isFinite(next) && next >= 0) onChange(next);
       }} />

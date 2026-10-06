@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     provider: "google",
     options: {
       redirectTo: `${origin}/auth/callback`,
-      scopes: "https://www.googleapis.com/auth/gmail.readonly",
+      scopes: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send",
       queryParams: {
         access_type: "offline",
         prompt: "consent",

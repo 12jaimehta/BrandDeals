@@ -13,12 +13,12 @@ import {
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const sources = [
-  { name: "Gmail", detail: "Brand mail over the official Gmail API. Signing in creates your account.", state: "Connect now", live: true },
-  { name: "Instagram", detail: "DMs on a professional account, with message access you approve.", state: "Connect now", live: true },
-  { name: "Outlook", detail: "Brand mail via Microsoft Graph.", state: "Official API", live: false },
-  { name: "X", detail: "Direct messages via the X API.", state: "Official API", live: false },
-  { name: "Messenger", detail: "Page inbox via the Messenger API.", state: "Official API", live: false },
-  { name: "WhatsApp Business", detail: "Business inbox via the Cloud API.", state: "Official API", live: false },
+  { name: "Gmail", detail: "Brand email, connected in one tap. Signing in creates your account.", state: "Live", live: true },
+  { name: "Instagram", detail: "DMs on a professional account, with message access you approve.", state: "Live", live: true },
+  { name: "WhatsApp Business", detail: "Your business inbox, next in line.", state: "Coming soon", live: false },
+  { name: "Outlook", detail: "Brand mail on Outlook and Hotmail.", state: "Coming soon", live: false },
+  { name: "X", detail: "Direct messages.", state: "Coming soon", live: false },
+  { name: "Messenger", detail: "Your Page inbox.", state: "Coming soon", live: false },
 ];
 
 const beats = [
@@ -35,34 +35,34 @@ type BeatId = (typeof beats)[number]["id"];
 const steps = [
   {
     n: "01",
-    title: "Connect the inboxes",
-    copy: "Gmail signs you in and becomes your account. Instagram attaches next as a professional account. Every later inbox lands back on the same list — add another or skip to the desk.",
-    points: ["Official APIs only", "No scraping, no passwords", "Skip anytime with ×"],
+    title: "Connect where deals land",
+    copy: "Gmail signs you in and becomes your account. Instagram attaches next as a professional account. WhatsApp Business, Outlook, X and Messenger follow — one desk for every inbox, so you stop checking six apps.",
+    points: ["One-tap connect", "Add more anytime", "Skip whenever you like"],
   },
   {
     n: "02",
-    title: "The desk reads every thread",
-    copy: "Each sync reads recent Gmail threads and Instagram DMs, scores them for collaboration signals, and drops newsletters and personal mail. Only brand opportunities stay in the list.",
-    points: ["Fee, scope, deadline, usage", "Exclusivity + payment terms", "Missing numbers stay blank"],
+    title: "Every thread gets found and pulled apart",
+    copy: "Each sync reads recent threads and DMs, keeps only real brand opportunities, and lifts out the fee, deliverables, deadline, usage, exclusivity and payment. Blanks stay blank — nothing is guessed.",
+    points: ["Fee, scope, deadline, usage", "Exclusivity + payment terms", "Newsletters kept out"],
   },
   {
     n: "03",
-    title: "Rates get counted, not guessed",
+    title: "Every offer gets evaluated",
     copy: "Thirty days of usage are already inside your rate. Every extra 30 days adds ₹12,500. The Samsung ask — 90 days on an ₹80,000 offer — becomes a ₹1,05,000 counter you can see the maths for.",
     points: ["90 asked − 30 included", "60 extra = 2 × ₹12,500", "+₹25,000 on the counter"],
   },
   {
     n: "04",
-    title: "You approve the reply",
-    copy: "Low offers leave the main list. Unpriced briefs stay visible and the draft names your minimum while asking for the budget. Grok can rewrite it. Copy is the only way anything leaves the app.",
-    points: ["Nothing is auto-sent", "Reminders stay on-device", "Grok rewrites, you send"],
+    title: "Reply and follow-up, ready for approval",
+    copy: "Low offers leave the main list. Unpriced briefs stay visible and the draft names your minimum while asking for the budget. AI can rewrite it, and the follow-up is timed for you. Copy is the only way anything leaves the app.",
+    points: ["Nothing is auto-sent", "Reminders stay on-device", "AI rewrites, you send"],
   },
 ];
 
 const faqs = [
   {
     q: "Does it message brands for me?",
-    a: "Never. There is no send button. Every reply lives as a draft until you copy it and send it yourself. Follow-ups are on-device reminders, not auto-messages.",
+    a: "Only when you press Send, and only the reply you approved. There is no scheduling and no auto-reply — every send is one tap by you, inside the app.",
   },
   {
     q: "What does it actually extract?",
@@ -82,7 +82,7 @@ const faqs = [
   },
   {
     q: "Which inboxes can I connect?",
-    a: "Gmail and Instagram today. Outlook, X, Messenger and WhatsApp Business are listed because each has an official inbox API — LinkedIn has no personal inbox API, so it is intentionally not listed.",
+    a: "Gmail and Instagram today. WhatsApp Business, Outlook, X and Messenger are coming soon — one desk for every inbox, so you stop checking six apps.",
   },
 ];
 
@@ -112,7 +112,7 @@ export function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <span className="flex items-center gap-2">
             <span className="grid h-6 w-6 place-items-center rounded-md bg-[#ff5a36] text-xs font-semibold text-[#14110e]">B</span>
-            Brand Deal Inbox · copy-only · official APIs
+            Brand Deal Inbox · nothing is ever sent for you
           </span>
           <span className="flex gap-4">
             <Link href="/connect" className="hover:text-[#f6f1e8]">Inboxes</Link>
@@ -184,28 +184,15 @@ function Kicker({ children }: { children: ReactNode }) {
 function Hero({ reduce }: { reduce: boolean }) {
   return (
     <section className="mx-auto max-w-6xl px-6 pb-14 pt-32 text-center md:pt-40">
-      {/* <motion.div
-        initial={reduce ? false : { opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease }}
-        className="mx-auto inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-1.5 text-xs text-[#f6f1e8]/70"
-      >
-        <span className="relative flex h-2 w-2">
-          <span className="absolute h-full w-full animate-ping rounded-full bg-[#ff5a36] opacity-60" />
-          <span className="h-2 w-2 rounded-full bg-[#ff5a36]" />
-        </span>
-        Official APIs only · Nothing is ever auto-sent
-      </motion.div> */}
-
       <h1 className="mx-auto mt-7 max-w-4xl font-serif text-[2.9rem] leading-[0.95] tracking-tight sm:text-7xl md:text-[5.6rem]">
         <span className="block overflow-hidden">
           <motion.span className="block" initial={reduce ? false : { y: "108%" }} animate={{ y: "0%" }} transition={{ duration: 0.85, ease }}>
-            Your brand deals,
+            Turn brand messages
           </motion.span>
         </span>
         <span className="block overflow-hidden pb-2">
           <motion.span className="block" initial={reduce ? false : { y: "108%" }} animate={{ y: "0%" }} transition={{ duration: 0.85, delay: 0.12, ease }}>
-            <span className="italic text-[#ff5a36]">read</span> before you reply.
+            into <span className="italic text-[#ff5a36]">paid</span> deals.
           </motion.span>
         </span>
       </h1>
@@ -216,9 +203,9 @@ function Hero({ reduce }: { reduce: boolean }) {
         transition={{ delay: 0.3, duration: 0.6, ease }}
         className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#f6f1e8]/65"
       >
-        Connect Gmail and Instagram. The desk pulls the thread apart — fee, deliverables,
-        deadline, usage, exclusivity, payment — counts what the usage is worth, times your
-        follow-up, and drafts a reply you approve. You send it. It never does.
+        Connect Gmail and Instagram. Your desk finds every brand offer, shows the fee,
+        the work, and the deadline on one card, tells you the fair price, and drafts
+        your reply. Copy the approved draft — or press Send yourself.
       </motion.p>
 
       <motion.div
@@ -235,6 +222,15 @@ function Hero({ reduce }: { reduce: boolean }) {
         </Link>
       </motion.div>
 
+      <motion.p
+        initial={reduce ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.55, duration: 0.6 }}
+        className="mt-5 text-[11px] uppercase tracking-[0.18em] text-[#f6f1e8]/35"
+      >
+        WhatsApp Business · Outlook · X · Messenger — coming soon
+      </motion.p>
+
       <motion.dl
         initial={reduce ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -242,9 +238,9 @@ function Hero({ reduce }: { reduce: boolean }) {
         className="mx-auto mt-12 grid max-w-2xl grid-cols-3 divide-x divide-white/10 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur"
       >
         {[
-          ["₹1,05,000", "Suggested counter"],
-          ["+₹25,000", "90-day usage uplift"],
-          ["2 days", "Follow-up timer"],
+          ["₹1,05,000", "Right price"],
+          ["+₹25,000", "Usage uplift"],
+          ["2 days", "Follow-up"],
         ].map(([v, l]) => (
           <div key={l} className="min-w-0 px-2 py-5 sm:px-4">
             <dt className="whitespace-nowrap font-serif text-lg tracking-tight sm:text-2xl">{v}</dt>
@@ -258,7 +254,117 @@ function Hero({ reduce }: { reduce: boolean }) {
   );
 }
 
+const mockFilters = [
+  { id: "deals", label: "Brand deals · 3" },
+  { id: "messages", label: "Brand deal messages" },
+  { id: "below", label: "Below your rate · 1" },
+  { id: "followups", label: "Follow-ups · 2" },
+] as const;
+
+type MockFilter = (typeof mockFilters)[number]["id"];
+
+type MockSeg = { text: string; hot?: boolean };
+
+type MockThread = {
+  tab: string;
+  brand: string;
+  person: string;
+  handle: string;
+  source: string;
+  bubbles: MockSeg[][];
+  rows: [string, string][];
+  reply: string;
+  filters: MockFilter[];
+};
+
+const mockThreads: Record<string, MockThread> = {
+  samsung: {
+    tab: "Samsung · ₹80,000",
+    brand: "Samsung",
+    person: "Ananya Shah",
+    handle: "Samsung Partnerships · Galaxy AI",
+    source: "Gmail thread",
+    bubbles: [
+      [{ text: "Scope is " }, { text: "2 Reels and 3 Stories", hot: true }, { text: ". Fee is " }, { text: "₹80,000", hot: true }, { text: ", 50% advance…" }],
+      [{ text: "Usage for " }, { text: "90 days", hot: true }, { text: ", exclusivity 30 days. Live before " }, { text: "18 October", hot: true }, { text: "." }],
+    ],
+    rows: [["Offer", "₹80,000"], ["Usage", "90 days"], ["Uplift", "+₹25,000"], ["Counter", "₹1,05,000"]],
+    reply: "For 90-day usage, my fee for 2 Reels + 3 Stories would be ₹1,05,000…",
+    filters: ["deals", "messages", "followups"],
+  },
+  boat: {
+    tab: "boAt · ₹1,20,000",
+    brand: "boAt",
+    person: "Meera Iyer",
+    handle: "boAt · Winter Drop",
+    source: "Instagram DM",
+    bubbles: [
+      [{ text: "Scope is " }, { text: "1 Reel + 2 Stories", hot: true }, { text: ". Fee is " }, { text: "₹1,20,000", hot: true }, { text: ", 50% advance…" }],
+      [{ text: "Usage for " }, { text: "30 days", hot: true }, { text: ". Live before " }, { text: "2 November", hot: true }, { text: "." }],
+    ],
+    rows: [["Offer", "₹1,20,000"], ["Usage", "30 days"], ["Uplift", "Included"], ["Counter", "₹1,20,000"]],
+    reply: "I can do 1 Reel + 2 Stories at ₹1,20,000. Tell me if you want to lock this…",
+    filters: ["deals", "messages"],
+  },
+  nykaa: {
+    tab: "Nykaa · fee missing",
+    brand: "Nykaa",
+    person: "Priya Nair",
+    handle: "Nykaa · Festive Edit",
+    source: "Gmail thread",
+    bubbles: [
+      [{ text: "Scope is " }, { text: "2 Reels", hot: true }, { text: ". Fee " }, { text: "not stated", hot: true }, { text: " — share your rates…" }],
+      [{ text: "Usage for " }, { text: "60 days", hot: true }, { text: ". Live before " }, { text: "25 October", hot: true }, { text: "." }],
+    ],
+    rows: [["Offer", "Not stated"], ["Usage", "60 days"], ["Uplift", "+₹12,500"], ["Counter", "Asks budget"]],
+    reply: "My fee for 2 Reels starts at my minimum. Could you share the budget…",
+    filters: ["deals", "messages", "followups"],
+  },
+  brightline: {
+    tab: "Brightline · ₹15,000",
+    brand: "Brightline",
+    person: "Karan Shah",
+    handle: "Brightline · Winter Drop",
+    source: "Instagram DM",
+    bubbles: [
+      [{ text: "Scope is " }, { text: "1 Reel", hot: true }, { text: ". Fee is " }, { text: "₹15,000", hot: true }, { text: "…" }],
+      [{ text: "Usage for " }, { text: "30 days", hot: true }, { text: ". Posting this week." }],
+    ],
+    rows: [["Offer", "₹15,000"], ["Usage", "30 days"], ["Uplift", "—"], ["Counter", "Below minimum"]],
+    reply: "Thanks — this sits under my minimum for a Reel…",
+    filters: ["below"],
+  },
+};
+
 function DeskMock({ reduce }: { reduce: boolean }) {
+  const [mockFilter, setMockFilter] = useState<MockFilter>("deals");
+  const [mockThread, setMockThread] = useState("samsung");
+  const [copied, setCopied] = useState(false);
+  const listed = Object.entries(mockThreads).filter(([, t]) => t.filters.includes(mockFilter));
+  const active = mockThreads[mockThread] ?? listed[0]?.[1] ?? mockThreads.samsung;
+  function pickThread(id: string) {
+    setMockThread(id);
+    setCopied(false);
+  }
+  function pickFilter(f: MockFilter) {
+    setMockFilter(f);
+    const first = Object.entries(mockThreads).find(([, t]) => t.filters.includes(f));
+    if (first) {
+      setMockThread(first[0]);
+      setCopied(false);
+    }
+  }
+  function copyReply() {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(active.reply).then(
+        () => {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1600);
+        },
+        () => undefined,
+      );
+    }
+  }
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 60, rotateX: 10 }}
@@ -279,61 +385,63 @@ function DeskMock({ reduce }: { reduce: boolean }) {
         </div>
         <div className="grid md:grid-cols-[220px_minmax(0,1fr)_250px]">
           <div className="hidden border-r border-white/10 p-3 md:block">
-            {[
-              ["Brand deals · 3", true],
-              ["Brand deal messages", false],
-              ["Below your rate · 1", false],
-              ["Follow-ups · 2", false],
-            ].map(([label, on]) => (
-              <div key={label as string} className={`mb-1.5 rounded-xl px-3 py-2 text-xs ${on ? "bg-[#f6f1e8] font-semibold text-[#14110e]" : "text-[#f6f1e8]/55"}`}>
-                {label as string}
-              </div>
+            {mockFilters.map((f) => (
+              <button key={f.id} type="button" onClick={() => pickFilter(f.id)} className={`mb-1.5 block w-full rounded-xl px-3 py-2 text-left text-xs transition ${mockFilter === f.id ? "bg-[#f6f1e8] font-semibold text-[#14110e]" : "text-[#f6f1e8]/55 hover:bg-white/5 hover:text-white"}`}>
+                {f.label}
+              </button>
             ))}
             <div className="mt-3 space-y-1.5 px-1">
-              {[
-                ["Samsung · ₹80,000", true],
-                ["Nykaa · fee missing", false],
-                ["boAt · ₹1,20,000", false],
-              ].map(([label, on]) => (
-                <div key={label as string} className={`rounded-xl border px-3 py-2.5 text-xs ${on ? "border-[#ff5a36]/50 bg-[#ff5a36]/10" : "border-white/8 text-[#f6f1e8]/50"}`}>
-                  {label as string}
-                </div>
-              ))}
+              <AnimatePresence mode="popLayout">
+                {listed.map(([id, t]) => (
+                  <motion.button key={id} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.25 }} type="button" onClick={() => pickThread(id)} className={`block w-full rounded-xl border px-3 py-2.5 text-left text-xs transition ${mockThread === id ? "border-[#ff5a36]/50 bg-[#ff5a36]/10 text-white" : "border-white/8 text-[#f6f1e8]/50 hover:border-white/20 hover:text-white"}`}>
+                    {t.tab}
+                  </motion.button>
+                ))}
+              </AnimatePresence>
             </div>
           </div>
           <div className="border-r border-white/10 p-5 sm:p-6">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff5a36]">Gmail thread</p>
-            <p className="mt-2 font-serif text-2xl tracking-tight">Ananya Shah</p>
-            <p className="text-xs text-[#f6f1e8]/45">Samsung Partnerships · Galaxy AI</p>
-            <div className="mt-4 space-y-2.5 text-[13px] leading-6">
-              <div className="rounded-2xl rounded-tl-md bg-white/[0.07] p-3.5 text-[#f6f1e8]/85">
-                Scope is <MarkHL>2 Reels and 3 Stories</MarkHL>. Fee is <MarkHL>₹80,000</MarkHL>, 50% advance…
-              </div>
-              <div className="rounded-2xl rounded-tl-md bg-white/[0.07] p-3.5 text-[#f6f1e8]/85">
-                Usage for <MarkHL>90 days</MarkHL>, exclusivity 30 days. Live before <MarkHL>18 October</MarkHL>.
-              </div>
-            </div>
+            <AnimatePresence mode="wait">
+              <motion.div key={mockThread} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.28, ease }}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff5a36]">{active.source}</p>
+                <p className="mt-2 font-serif text-2xl tracking-tight">{active.person}</p>
+                <p className="text-xs text-[#f6f1e8]/45">{active.handle}</p>
+                <div className="mt-4 space-y-2.5 text-[13px] leading-6">
+                  {active.bubbles.map((bubble, i) => (
+                    <div key={i} className="rounded-2xl rounded-tl-md bg-white/[0.07] p-3.5 text-[#f6f1e8]/85">
+                      {bubble.map((seg, j) => seg.hot
+                        ? <span key={j} className="rounded bg-[#ff5a36]/25 px-1 text-white">{seg.text}</span>
+                        : <span key={j}>{seg.text}</span>)}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
           <div className="bg-[#f6f1e8] p-5 text-[#14110e]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c2410c]">The deal</p>
-            <p className="mt-1 font-serif text-2xl tracking-tight">Samsung</p>
-            <div className="mt-3 space-y-2 text-xs">
-              {[
-                ["Offer", "₹80,000"],
-                ["Usage", "90 days"],
-                ["Uplift", "+₹25,000"],
-                ["Counter", "₹1,05,000"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between border-b border-[#14110e]/10 py-1.5">
-                  <span className="text-[#14110e]/50">{k}</span>
-                  <span className="font-semibold">{v}</span>
+            <AnimatePresence mode="wait">
+              <motion.div key={mockThread} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.28, ease }}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c2410c]">The deal</p>
+                <p className="mt-1 font-serif text-2xl tracking-tight">{active.brand}</p>
+                <div className="mt-3 space-y-2 text-xs">
+                  {active.rows.map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between border-b border-[#14110e]/10 py-1.5">
+                      <span className="text-[#14110e]/50">{k}</span>
+                      <span className="font-semibold">{v}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 rounded-2xl bg-[#14110e] p-3.5 text-xs leading-5 text-[#f6f1e8]">
-              <span className="text-[#ff5a36]">Suggested reply —</span> For 90-day usage, my fee for 2 Reels + 3 Stories would be ₹1,05,000…
-              <span className="mt-2 block text-[#f6f1e8]/40">Copy-only. Nothing is sent.</span>
-            </div>
+                <div className="mt-3 rounded-2xl bg-[#14110e] p-3.5 text-xs leading-5 text-[#f6f1e8]">
+                  <span className="text-[#ff5a36]">Suggested reply —</span> {active.reply}
+                  <span className="mt-2 flex justify-end">
+                    <button type="button" onClick={copyReply} aria-label="Copy the suggested reply" className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-[#f6f1e8]/70 transition hover:border-[#ff5a36]/60 hover:text-white">
+                      {copied ? <CheckIcon /> : <CopyIcon />}
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+                  </span>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -341,8 +449,21 @@ function DeskMock({ reduce }: { reduce: boolean }) {
   );
 }
 
-function MarkHL({ children }: { children: ReactNode }) {
-  return <span className="rounded bg-[#ff5a36]/25 px-1 text-white">{children}</span>;
+function CopyIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
 }
 
 function Ticker() {
@@ -376,8 +497,8 @@ function WhatWeDo() {
           Not a CRM. A reader that runs the deal.
         </h2>
         <p className="mt-5 max-w-2xl text-base leading-7 text-[#f6f1e8]/60">
-          No contracts, invoices, or pipelines. Four jobs, done on every thread: decide if it is a
-          brand deal, pull the terms out, price the usage, and get the next reply ready for your approval.
+          No contracts, invoices, or pipelines. Four jobs, done on every thread: find the real
+          opportunities, pull the terms out, price the usage, and get the reply and follow-up ready for your approval.
         </p>
       </Reveal>
       <div className="mt-12 grid gap-4 md:grid-cols-2">
@@ -605,14 +726,14 @@ function Bento() {
       big: false,
     },
     {
-      title: "Grok rewrites. You approve.",
-      copy: "One tap rewrites the rules draft with Grok. Copy is the only exit — the app has no send path at all.",
+      title: "AI rewrites. You approve.",
+      copy: "One tap gets a fresh AI rewrite of your reply. Copy the approved draft — or press Send yourself.",
       tag: "Drafts",
       big: false,
     },
     {
       title: "Private by construction",
-      copy: "Tokens stay server-side behind RLS with no browser-readable policies. Gmail is read-only, Instagram is message-scoped, and bodies are never logged.",
+      copy: "Inbox tokens stay locked on our servers — never in your browser. Gmail sends only the reply you approve, Instagram is message-scoped, and message bodies are never logged.",
       tag: "Trust",
       big: false,
     },
@@ -655,8 +776,8 @@ function Inboxes() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <Kicker>Inboxes</Kicker>
-            <h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-6xl">Where the deals arrive</h2>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Only inboxes with an official API. Personal apps with no inbox API are not listed.</p>
+            <h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-6xl">Where the deals land</h2>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Gmail and Instagram today. WhatsApp Business, Outlook, X and Messenger are coming soon — every inbox in one desk.</p>
           </div>
           <Link href="/connect" className="rounded-full bg-[#f6f1e8] px-5 py-2.5 text-sm font-semibold text-[#14110e] hover:bg-white">Add yours</Link>
         </div>

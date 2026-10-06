@@ -144,8 +144,7 @@ export async function freshAccessToken(
   return json.access_token;
 }
 
-export async function fetchRecentThreads(accessToken: string, userEmail: string | null) {
-  const listUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/threads");
+export async function fetchRecentThreads(accessToken: string, userEmail: string | null) {  const listUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/threads");
   listUrl.searchParams.set("maxResults", "12");
   listUrl.searchParams.set("q", "newer_than:21d -in:chats -in:drafts");
   const listResponse = await fetch(listUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -180,4 +179,42 @@ export async function fetchRecentThreads(accessToken: string, userEmail: string 
   return threads
     .map((thread) => (thread ? threadToConversation(thread, userEmail) : null))
     .filter((conversation): conversation is Conversation => Boolean(conversation));
+}
+
+function encodeBase64Url(text: string) {
+  return Buffer.from(text, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+export async function sendGmailReply(
+  accessToken: string,
+  input: { threadId: string; to: string; subject: string; body: string },
+) {
+  const subject = /^re:/i.test(input.subject.trim())
+    ? input.subject.trim()
+    : `Re: ${input.subject.trim() || "your message"}`;
+  const raw = encodeBase64Url(
+    [`To: ${input.to}`, `Subject: ${subject}`, "Content-Type: text/plain; charset=utf-8", "", input.body].join("\r\n"),
+  );
+  const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ raw, threadId: input.threadId }),
+  });
+  if (response.status === 401) {
+    throw new Error("Gmail refused the token. Sign in with Google again.");
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: { message?: string; errors?: { reason?: string }[] };
+    } | null;
+    if (body?.error?.errors?.[0]?.reason === "insufficientPermissions") {
+      throw new Error("This sign-in can't send mail yet. Sign out, sign in with Google again, and allow sending.");
+    }
+    throw new Error(body?.error?.message?.slice(0, 220) || "Gmail did not send the reply.");
+  }
+  return (await response.json()) as { id?: string; threadId?: string };
 }
