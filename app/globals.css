@@ -5,6 +5,10 @@
   --font-serif: var(--font-fraunces), Georgia, serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   height: 100%;
@@ -12,6 +16,11 @@ body {
 
 body {
   margin: 0;
+}
+
+::selection {
+  background: #ff5a36;
+  color: #14110e;
 }
 
 .site-grain {
@@ -35,4 +44,31 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation: none; }
+}
+
+.bd-range {
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #ff5a36 var(--fill, 30%), rgba(255, 255, 255, 0.12) var(--fill, 30%));
+  outline: none;
+  cursor: pointer;
+}
+
+.bd-range::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: #f6f1e8;
+  border: 5px solid #ff5a36;
+  box-shadow: 0 6px 20px rgba(255, 90, 54, 0.5);
+}
+
+.bd-range::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: #f6f1e8;
+  border: 5px solid #ff5a36;
 }
