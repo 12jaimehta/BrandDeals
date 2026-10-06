@@ -7,6 +7,7 @@ import {
   whatsappConfig,
   xConfig,
 } from "@/lib/config";
+import { hasAnyInbox } from "@/lib/any-inbox";
 import { hasGmailConnection } from "@/lib/gmail-status";
 import { hasInstagramConnection } from "@/lib/instagram-status";
 import { getViewer } from "@/lib/viewer";
@@ -27,6 +28,7 @@ export default async function ConnectPage({
     <ConnectApps
       email={viewer?.email ?? null}
       signedIn={Boolean(viewer)}
+      canOpenDesk={viewer ? await hasAnyInbox(viewer.id) : false}
       connected={{
         gmail: gmailConnected,
         instagram: instagramConnected,

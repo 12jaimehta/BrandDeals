@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Brand Deal Inbox — Turn brand messages into paid deals",
   description:
-    "Connect Gmail and Instagram. Your desk finds every brand offer, shows the fee, work, and deadline on one card, tells you the fair price, and drafts your reply. Copy it or send it yourself.",
+    "Connect Gmail and Instagram. The desk reads each brand offer, tells you the fair price, and writes the reply",
 };
 
 export default async function Page() {

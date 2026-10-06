@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 import {
   AnimatePresence,
   motion,
@@ -96,7 +97,7 @@ export function HomePage({ email }: { email: string | null }) {
       <div className="site-grain" aria-hidden="true" />
       <motion.div className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-[#ff5a36]" style={{ scaleX: reduce ? 0 : bar }} />
       <Backdrop />
-      <Nav email={email} />
+      <SiteHeader email={email} active="home" />
       <main className="relative z-10">
         <Hero reduce={Boolean(reduce)} />
         <Ticker />
@@ -108,18 +109,7 @@ export function HomePage({ email }: { email: string | null }) {
         <Faq />
         <Close />
       </main>
-      <footer className="relative z-10 border-t border-white/10 px-6 py-10 text-sm text-[#f6f1e8]/45">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <span className="flex items-center gap-2">
-            <span className="grid h-6 w-6 place-items-center rounded-md bg-[#ff5a36] text-xs font-semibold text-[#14110e]">B</span>
-            Brand Deal Inbox · you approve every send
-          </span>
-          <span className="flex gap-4">
-            <Link href="/connect" className="hover:text-[#f6f1e8]">Inboxes</Link>
-            <Link href="/deals" className="hover:text-[#f6f1e8]">Open the desk</Link>
-          </span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
@@ -133,34 +123,6 @@ function Backdrop() {
       <div className="absolute -top-32 left-1/2 h-[30rem] w-[52rem] -translate-x-1/2 rounded-full bg-[#ff5a36]/14 blur-[120px]" />
       <div className="absolute right-[-8rem] top-[38rem] h-[24rem] w-[24rem] rounded-full bg-amber-400/8 blur-[110px]" />
     </div>
-  );
-}
-
-function Nav({ email }: { email: string | null }) {
-  return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-[#14110e]/78 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-        <Link href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#14110e]">B</span>
-          <span className="truncate font-serif text-base tracking-tight sm:text-lg">Brand Deal Inbox</span>
-        </Link>
-        <nav className="flex shrink-0 items-center gap-0.5 text-sm">
-          <a href="#what" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white lg:inline">What it does</a>
-          <a href="#letter" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white sm:inline">Live read</a>
-          <a href="#rates" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white md:inline">Rate engine</a>
-          <Link href="/connect" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Inboxes</Link>
-          {email ? (
-            <>
-              <span className="hidden max-w-40 truncate px-2 text-xs text-[#f6f1e8]/50 xl:inline">{email}</span>
-              <a href="/auth/sign-out" className="rounded-lg px-3 py-2 text-[#f6f1e8]/70 hover:text-white">Sign out</a>
-            </>
-          ) : (
-            <Link href="/login" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Sign in</Link>
-          )}
-          <Link href="/deals" className="ml-1 whitespace-nowrap rounded-full bg-[#f6f1e8] px-3.5 py-2 font-medium text-[#14110e] hover:bg-white">Open desk</Link>
-        </nav>
-      </div>
-    </header>
   );
 }
 
@@ -211,9 +173,7 @@ function Hero({ reduce }: { reduce: boolean }) {
         transition={{ delay: 0.3, duration: 0.6, ease }}
         className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#f6f1e8]/65"
       >
-        Connect Gmail and Instagram. Your desk finds every brand offer, shows the fee,
-        the work, and the deadline on one card, tells you the fair price, and drafts
-        your reply. Copy the approved draft — or press Send yourself.
+        Connect Gmail and Instagram. The desk reads each brand offer, tells you the fair price, and writes the reply. You send it.
       </motion.p>
 
       <motion.div
@@ -264,7 +224,6 @@ function Hero({ reduce }: { reduce: boolean }) {
 
 const mockFilters = [
   { id: "deals", label: "Brand deals · 3" },
-  { id: "messages", label: "Brand deal messages" },
   { id: "below", label: "Below your rate · 1" },
   { id: "followups", label: "Follow-ups · 2" },
 ] as const;
@@ -298,7 +257,7 @@ const mockThreads: Record<string, MockThread> = {
     ],
     rows: [["Offer", "₹80,000"], ["Usage", "90 days"], ["Uplift", "+₹25,000"], ["Counter", "₹1,05,000"]],
     reply: "For 90-day usage, my fee for 2 Reels + 3 Stories would be ₹1,05,000…",
-    filters: ["deals", "messages", "followups"],
+    filters: ["deals", "followups"],
   },
   boat: {
     tab: "boAt · ₹1,20,000",
@@ -312,7 +271,7 @@ const mockThreads: Record<string, MockThread> = {
     ],
     rows: [["Offer", "₹1,20,000"], ["Usage", "30 days"], ["Uplift", "Included"], ["Counter", "₹1,20,000"]],
     reply: "I can do 1 Reel + 2 Stories at ₹1,20,000. Tell me if you want to lock this…",
-    filters: ["deals", "messages"],
+    filters: ["deals"],
   },
   nykaa: {
     tab: "Nykaa · fee missing",
@@ -326,7 +285,7 @@ const mockThreads: Record<string, MockThread> = {
     ],
     rows: [["Offer", "Not stated"], ["Usage", "60 days"], ["Uplift", "+₹12,500"], ["Counter", "Asks budget"]],
     reply: "My fee for 2 Reels starts at my minimum. Could you share the budget…",
-    filters: ["deals", "messages", "followups"],
+    filters: ["deals", "followups"],
   },
   brightline: {
     tab: "Brightline · ₹15,000",
@@ -496,7 +455,7 @@ function Ticker() {
 
 /* ---------- what it does ---------- */
 
-function WhatWeDo() {
+export function WhatWeDo() {
   return (
     <section id="what" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24">
       <Reveal>
@@ -532,7 +491,7 @@ function WhatWeDo() {
 
 /* ---------- live read demo ---------- */
 
-function ThreadDemo({ reduce }: { reduce: boolean }) {
+export function ThreadDemo({ reduce }: { reduce: boolean }) {
   const [index, setIndex] = useState(0);
   useEffect(() => {
     if (reduce) return;
@@ -620,7 +579,7 @@ function Beat({ on, children }: { on: boolean; children: ReactNode }) {
 
 /* ---------- rate lab ---------- */
 
-function RateLab() {
+export function RateLab() {
   const [offer, setOffer] = useState(80000);
   const [usage, setUsage] = useState(90);
   const included = 30;

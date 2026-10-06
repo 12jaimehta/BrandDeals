@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 import { getViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
@@ -22,13 +23,15 @@ export default async function LoginPage({
   const message = params.error ? (errors[params.error] ?? null) : null;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-x-hidden bg-[#14110e] px-6 py-16 text-[#f6f1e8]">
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#14110e] text-[#f6f1e8]">
       <div className="site-grain" aria-hidden="true" />
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -top-28 left-1/2 h-[26rem] w-[46rem] -translate-x-1/2 rounded-full bg-[#ff5a36]/12 blur-[110px]" />
       </div>
+      <SiteHeader email={null} />
 
-      <main className="relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-[#1c1814] p-8 text-center shadow-[0_60px_140px_-40px_rgba(0,0,0,0.9)] sm:p-10">
+      <main className="relative z-10 flex flex-1 items-center justify-center px-6 py-24">
+      <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#1c1814] p-8 text-center shadow-[0_60px_140px_-40px_rgba(0,0,0,0.9)] sm:p-10">
         <Link href="/" className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#ff5a36] text-lg font-semibold text-[#14110e]">
           B
         </Link>
@@ -60,7 +63,9 @@ export default async function LoginPage({
           <Link href="/" className="text-[#f6f1e8]/55 hover:text-white">Home</Link>
           <Link href="/connect" className="text-[#f6f1e8]/55 hover:text-white">See the inboxes</Link>
         </div>
+      </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

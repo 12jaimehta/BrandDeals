@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { SiteHeader } from "@/components/SiteHeader";
 import {
   DEFAULT_RULES,
   addDays,
@@ -24,7 +25,7 @@ import {
 
 type Reader = "rules" | "openai";
 type InboxConversation = Conversation & { extraction?: Extraction; reader?: Reader };
-type Filter = "deals" | "messages" | "below" | "followups" | "aside";
+type Filter = "deals" | "below" | "followups" | "aside";
 type SourceKey = "gmail" | "instagram";
 type Action = {
   seen: boolean;
@@ -186,7 +187,6 @@ export function Inbox({
     const extraction = readingFor(conversation);
     const action = { ...emptyAction(), ...actions[conversation.id] };
     if (mode === "deals") return extraction.isBrandOpportunity && !action.dismissed && !belowMinimum(extraction, rules.minimumOffer);
-    if (mode === "messages") return extraction.isBrandOpportunity && !action.dismissed;
     if (mode === "below") return belowMinimum(extraction, rules.minimumOffer) && !action.dismissed;
     if (mode === "followups") return extraction.isBrandOpportunity && Boolean(action.followUpAt) && !action.followedUp && !action.dismissed;
     if (mode === "aside") return extraction.isBrandOpportunity && action.dismissed;
@@ -376,10 +376,8 @@ export function Inbox({
       ? "Sign in, connect the inboxes you use, then press Sync."
       : "Add Supabase and Google in .env before connecting an inbox.";
 
-  const messageCount = conversations.filter((conversation) => matches(conversation, "messages")).length;
   const filters = [
     ["deals", "Brand deals", dealCount],
-    ["messages", "Brand deal messages", messageCount],
     ["below", "Below your rate", belowCount],
     ["followups", "Follow-ups", followCount],
     ["aside", "Set aside", conversations.filter((item) => matches(item, "aside")).length],
@@ -388,29 +386,17 @@ export function Inbox({
   return (
     <div className="relative flex h-dvh min-w-0 flex-col overflow-hidden bg-[#14110e] text-[#f6f1e8]">
       <div className="site-grain" aria-hidden="true" />
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#14110e]/90 px-4 backdrop-blur md:px-5">
-        <a href="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#14110e]">B</span>
-          <span className="truncate font-serif text-lg leading-none tracking-tight">Brand Deal Inbox</span>
-        </a>
-        <nav className="ml-auto flex items-center gap-2">
-          {email ? (
-            <label className="mr-1 hidden items-center gap-2 text-xs text-[#f6f1e8]/60 lg:flex">
-              <input className="h-4 w-4 accent-[#ff5a36]" type="checkbox" checked={autoSync} onChange={(event) => toggleAuto(event.target.checked)} />
-              Auto sync
-            </label>
-          ) : null}
-          <a className="rounded-full px-3 py-1.5 text-sm text-[#f6f1e8]/75 transition hover:text-white" href="/connect">Inboxes</a>
-          {email ? (
-            <button className="rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#14110e] transition hover:bg-[#ff7a5c] disabled:opacity-50" type="button" onClick={() => void syncAll()} disabled={syncing != null}>
-              {syncing ? "Reading…" : "Sync"}
-            </button>
-          ) : (
-            <a className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#14110e]" href="/login"><span className="sm:hidden">Sign in</span><span className="hidden sm:inline">Sign in to sync</span></a>
-          )}
-          {email ? <a className="rounded-full px-2 py-1.5 text-sm text-[#f6f1e8]/70 hover:text-white" href="/auth/sign-out">Sign out</a> : null}
-        </nav>
-      </header>
+      <SiteHeader
+        email={email}
+        active="desk"
+        fixed={false}
+        desk={email ? {
+          autoSync,
+          onAutoSync: toggleAuto,
+          syncing: syncing != null,
+          onSync: () => void syncAll(),
+        } : undefined}
+      />
 
       <div className="grid min-h-0 min-w-0 flex-1 overflow-hidden md:grid-cols-[300px_minmax(0,1fr)]">
         <aside className={`${pane === "list" ? "flex" : "hidden"} min-h-0 min-w-0 flex-col border-white/10 md:flex md:border-r`}>

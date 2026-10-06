@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { Inbox } from "@/components/Inbox";
 import { instagramConfig, publicConfig } from "@/lib/config";
+import { hasAnyInbox } from "@/lib/any-inbox";
 import { loadSavedConversations } from "@/lib/saved-inbox";
 import { hasInstagramConnection } from "@/lib/instagram-status";
 import { getViewer } from "@/lib/viewer";
@@ -13,7 +15,10 @@ export default async function DealsPage({
 }) {
   const params = await searchParams;
   const viewer = await getViewer();
-  const saved = viewer ? await loadSavedConversations() : [];
+  if (!viewer || !(await hasAnyInbox(viewer.id))) {
+    redirect("/connect?auth=need-inbox");
+  }
+  const saved = await loadSavedConversations();
   const instagramConnected = viewer ? await hasInstagramConnection(viewer.id) : false;
 
   return (
