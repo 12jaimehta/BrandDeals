@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   DEFAULT_RULES,
   addDays,
@@ -23,7 +24,7 @@ import {
 
 type Reader = "rules" | "openai";
 type InboxConversation = Conversation & { extraction?: Extraction; reader?: Reader };
-type Filter = "deals" | "below" | "followups" | "all" | "aside";
+type Filter = "deals" | "messages" | "below" | "followups" | "aside";
 type SourceKey = "gmail" | "instagram";
 type Action = {
   seen: boolean;
@@ -73,14 +74,15 @@ function deadlineHint(iso: string) {
   return `${Math.abs(days)} days ago`;
 }
 
-function preview(conversation: Conversation) {
-  const line = (conversation.messages[0]?.text || "").replace(/\s+/g, " ").trim();
-  return line.length > 88 ? `${line.slice(0, 88).trim()}…` : line;
-}
-
 function listTitle(conversation: InboxConversation, extraction: Extraction) {
   if (!extraction.isBrandOpportunity) return conversation.fromName;
   return extraction.brand || extraction.campaign || conversation.fromName;
+}
+
+function dealLine(extraction: Extraction) {
+  const offer = extraction.offerAmount == null ? "Fee not stated" : formatINR(extraction.offerAmount);
+  const work = extraction.deliverables.join(" + ");
+  return work ? `${offer} · ${work}` : offer;
 }
 
 function listSubtitle(conversation: InboxConversation, extraction: Extraction) {
@@ -119,7 +121,7 @@ export function Inbox({
   const [followers, setFollowers] = useState<number | null>(null);
   const [grokDrafts, setGrokDrafts] = useState<Record<string, string>>({});
   const [drafting, setDrafting] = useState(false);
-  const [pane, setPane] = useState<"list" | "thread">("list");
+  const [pane, setPane] = useState<"list" | "thread" | "deal">("list");
   const busy = useRef(false);
   const syncRef = useRef({ gmail: async (_quiet?: boolean) => {}, instagram: async (_quiet?: boolean) => {} });
 
@@ -183,10 +185,11 @@ export function Inbox({
     const extraction = readingFor(conversation);
     const action = { ...emptyAction(), ...actions[conversation.id] };
     if (mode === "deals") return extraction.isBrandOpportunity && !action.dismissed && !belowMinimum(extraction, rules.minimumOffer);
+    if (mode === "messages") return extraction.isBrandOpportunity && !action.dismissed;
     if (mode === "below") return belowMinimum(extraction, rules.minimumOffer) && !action.dismissed;
-    if (mode === "followups") return Boolean(action.followUpAt) && !action.followedUp && !action.dismissed;
-    if (mode === "aside") return action.dismissed;
-    return true;
+    if (mode === "followups") return extraction.isBrandOpportunity && Boolean(action.followUpAt) && !action.followedUp && !action.dismissed;
+    if (mode === "aside") return extraction.isBrandOpportunity && action.dismissed;
+    return false;
   }
 
   const visible = useMemo(() => {
@@ -344,98 +347,99 @@ export function Inbox({
       ? "Sign in to read Gmail. Connect a professional Instagram account for DMs."
       : "Add Supabase and Google in .env before connecting an inbox.";
 
+  const messageCount = conversations.filter((conversation) => matches(conversation, "messages")).length;
   const filters = [
     ["deals", "Brand deals", dealCount],
+    ["messages", "Brand deal messages", messageCount],
     ["below", "Below your rate", belowCount],
     ["followups", "Follow-ups", followCount],
-    ["all", "All messages", conversations.filter(sourceOn).length],
     ["aside", "Set aside", conversations.filter((item) => matches(item, "aside")).length],
   ] as const;
 
   return (
-    <div className="flex h-screen min-w-0 flex-col overflow-hidden bg-zinc-100 text-zinc-950">
-      <header className="flex h-16 shrink-0 items-center gap-4 border-b border-zinc-200 bg-white px-4 md:px-6">
-        <a href="/" className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-zinc-950 text-sm font-semibold text-white">B</span>
+    <div className="flex h-dvh min-w-0 flex-col overflow-hidden bg-[#f3eee6] text-[#1a1410]">
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#1a1410] px-4 text-[#f6f1e8] md:px-5">
+        <a href="/" className="flex min-w-0 items-center gap-2.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#1a1410]">B</span>
           <span className="truncate font-serif text-lg leading-none tracking-tight">Brand Deal Inbox</span>
         </a>
         <div className="ml-auto flex items-center gap-2">
           {email ? (
-            <label className="mr-1 hidden items-center gap-2 text-xs text-zinc-600 lg:flex">
-              <input className="h-4 w-4 accent-zinc-950" type="checkbox" checked={autoSync} onChange={(event) => toggleAuto(event.target.checked)} />
+            <label className="mr-1 hidden items-center gap-2 text-xs text-[#f6f1e8]/70 lg:flex">
+              <input className="h-4 w-4 accent-[#ff5a36]" type="checkbox" checked={autoSync} onChange={(event) => toggleAuto(event.target.checked)} />
               Auto sync
             </label>
           ) : null}
-          <a className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium hover:bg-zinc-50" href="/connect">Inboxes</a>
+          <a className="rounded-full px-3 py-1.5 text-sm text-[#f6f1e8]/80 hover:text-white" href="/connect">Inboxes</a>
           {email ? (
-            <button className="rounded-lg bg-zinc-950 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50" type="button" onClick={() => void syncAll()} disabled={syncing != null}>
+            <button className="rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#1a1410] disabled:opacity-50" type="button" onClick={() => void syncAll()} disabled={syncing != null}>
               {syncing ? "Reading" : "Sync"}
             </button>
           ) : (
-            <a className="rounded-lg bg-zinc-950 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800" href="/connect">Connect inboxes</a>
+            <a className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#1a1410]" href="/connect"><span className="sm:hidden">Connect</span><span className="hidden sm:inline">Connect inboxes</span></a>
           )}
-          {email ? <a className="hidden rounded-lg px-2 py-2 text-sm text-zinc-500 hover:text-zinc-950 sm:inline" href="/auth/sign-out">Sign out</a> : null}
+          {email ? <a className="hidden rounded-full px-2 py-1.5 text-sm text-[#f6f1e8]/60 hover:text-white sm:inline" href="/auth/sign-out">Sign out</a> : null}
         </div>
       </header>
 
       <div className="grid min-h-0 min-w-0 flex-1 overflow-hidden md:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className={`${pane === "thread" ? "hidden md:flex" : "flex"} min-h-0 flex-col border-r border-zinc-200 bg-white`}>
-          <div className="border-b border-zinc-100 px-4 py-3 text-xs text-zinc-500">{banner}</div>
-          <nav className="grid gap-1 px-3 py-3">
-            {filters.map(([id, label, count]) => (
-              <button key={id} className={`flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${filter === id ? "bg-zinc-950 text-white" : "text-zinc-700 hover:bg-zinc-100"}`} type="button" onClick={() => chooseFilter(id)}>
-                <span>{label}</span>
-                <span className={`text-xs ${filter === id ? "text-zinc-300" : "text-zinc-400"}`}>{count}</span>
-              </button>
-            ))}
-          </nav>
-          <div className="border-t border-zinc-100 px-4 py-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">Platforms</p>
-            <div className="grid gap-2">
-              <PlatformToggle label="Gmail" on={sources.gmail} detail={sources.gmail ? "In this inbox" : "Hidden"} onClick={() => toggleSource("gmail")} />
-              <PlatformToggle label="Instagram" on={sources.instagram && instagramReady} detail={instagramReady ? (sources.instagram ? "In this inbox" : "Hidden") : "Not connected"} onClick={() => instagramReady ? toggleSource("instagram") : undefined} disabled={!instagramReady} />
-              <a className="text-xs font-medium text-zinc-500 underline" href="/connect">Add an inbox</a>
+        <aside className={`${pane === "list" ? "flex" : "hidden"} min-h-0 min-w-0 flex-col border-[#1a1410]/10 md:flex md:border-r`}>
+          <div className="shrink-0 space-y-3 border-b border-[#1a1410]/10 px-3 py-3">
+            <p className="line-clamp-2 text-xs leading-5 text-[#1a1410]/55">{banner}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {filters.map(([id, label, count]) => (
+                <button key={id} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${filter === id ? "bg-[#1a1410] text-[#f6f1e8]" : "bg-white/70 text-[#1a1410]/70"}`} type="button" onClick={() => chooseFilter(id)}>
+                  {label} {count}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <SourceChip label="Gmail" on={sources.gmail} onClick={() => toggleSource("gmail")} />
+              <SourceChip label="Instagram" on={sources.instagram && instagramReady} disabled={!instagramReady} onClick={() => instagramReady ? toggleSource("instagram") : undefined} />
+              <a className="px-2 text-xs font-medium text-[#1a1410]/50 underline" href="/connect">Add</a>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
             {visible.length ? visible.map((conversation) => {
               const extraction = readingFor(conversation);
               const action = actionFor(conversation.id);
               const active = selected?.id === conversation.id;
               const unread = !action.seen && extraction.isBrandOpportunity;
               return (
-                <button key={conversation.id} className={`mb-1 w-full rounded-xl px-3 py-3 text-left ${active ? "bg-zinc-100" : "hover:bg-zinc-50"}`} type="button" onClick={() => select(conversation.id)}>
+                <button key={conversation.id} className={`block w-full border-b border-[#1a1410]/8 px-4 py-3.5 text-left ${active ? "bg-white" : "hover:bg-white/50"}`} type="button" onClick={() => select(conversation.id)}>
                   <span className="flex items-center justify-between gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${conversation.source === "gmail" ? "bg-blue-50 text-blue-700" : "bg-pink-50 text-pink-700"}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${conversation.source === "gmail" ? "bg-[#1a1410] text-[#f6f1e8]" : "bg-[#ff5a36] text-[#1a1410]"}`}>
                       {conversation.source === "gmail" ? "Gmail" : "Instagram"}
                     </span>
-                    <span className="text-xs text-zinc-400">{formatDate(conversation.receivedAt)}</span>
+                    <span className="shrink-0 text-xs text-[#1a1410]/45">{formatDate(conversation.receivedAt)}</span>
                   </span>
-                  <span className="mt-2 flex items-center gap-2">
-                    {unread ? <span className="h-1.5 w-1.5 rounded-full bg-orange-500" /> : null}
+                  <span className="mt-2 flex min-w-0 items-center gap-2">
+                    {unread ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff5a36]" /> : null}
                     <span className="truncate text-sm font-semibold">{listTitle(conversation, extraction)}</span>
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-zinc-500">{listSubtitle(conversation, extraction)}</span>
-                  <span className="mt-1 block truncate text-xs text-zinc-400">{preview(conversation)}</span>
-                  {action.followUpAt && !action.followedUp ? <span className="mt-2 block text-[11px] font-semibold tracking-wide text-orange-700">{followUpLabel(action)}</span> : null}
+                  <span className="mt-0.5 block truncate text-xs text-[#1a1410]/55">{listSubtitle(conversation, extraction)}</span>
+                  <span className="mt-1 block truncate text-xs text-[#1a1410]/45">{dealLine(extraction)}</span>
+                  {action.followUpAt && !action.followedUp ? <span className="mt-2 block text-[11px] font-semibold tracking-wide text-[#c2410c]">{followUpLabel(action)}</span> : null}
                 </button>
               );
             }) : (
-              <div className="px-3 py-8">
-                <h2 className="font-serif text-2xl tracking-tight">{conversations.length ? "Nothing in this view" : "No messages yet"}</h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  {conversations.length ? "Another filter still has threads." : "Sync Gmail or Instagram. Priced deals under your minimum move to Below your rate."}
+              <div className="px-4 py-10">
+                <h2 className="font-serif text-2xl tracking-tight">{conversations.length ? "No brand deals here" : "No brand deals yet"}</h2>
+                <p className="mt-2 text-sm leading-6 text-[#1a1410]/55">
+                  {conversations.length ? "Another filter still has brand deals." : "Sync Gmail or Instagram. Only brand deals are listed."}
                 </p>
               </div>
             )}
           </div>
         </aside>
 
-        <div className={`${pane === "list" ? "hidden md:grid" : "grid"} h-full min-h-0 min-w-0 overflow-hidden xl:grid-cols-[minmax(0,1fr)_400px]`}>
-        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-zinc-50">
-          <Thread conversation={selected} onBack={() => setPane("list")} />
+        <div className={`${pane === "list" ? "hidden" : "grid"} min-h-0 min-w-0 overflow-hidden md:grid lg:grid-cols-[minmax(0,1fr)_380px]`}>
+        <section className={`${pane === "deal" ? "hidden" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden lg:flex`}>
+          <Thread conversation={selected} onBack={() => setPane("list")} onDeal={() => setPane("deal")} />
         </section>
+        <div className={`${!selected ? "hidden" : pane === "deal" ? "flex" : "hidden"} min-h-0 min-w-0 overflow-hidden ${selected ? "lg:flex" : ""}`}>
         <Deal
+          onBack={() => setPane("thread")}
           conversation={selected}
           rules={rules}
           rulesOpen={rulesOpen}
@@ -484,57 +488,77 @@ export function Inbox({
           }}
         />
         </div>
+        </div>
       </div>
-      <div className={`fixed bottom-5 left-1/2 z-20 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm shadow-xl ${toast == null ? "hidden" : ""}`} role="status" aria-live="polite">{toast}</div>
+      <AnimatePresence>
+        {toast ? (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed bottom-5 left-1/2 z-30 w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl bg-[#1a1410] px-4 py-3 text-sm text-[#f6f1e8] shadow-xl"
+            role="status"
+            aria-live="polite"
+          >
+            {toast}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
 
-function PlatformToggle({ label, detail, on, onClick, disabled }: { label: string; detail: string; on: boolean; onClick?: () => void; disabled?: boolean }) {
+function SourceChip({ label, on, onClick, disabled }: { label: string; on: boolean; onClick?: () => void; disabled?: boolean }) {
   return (
-    <button className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 px-3 py-2 text-left disabled:cursor-not-allowed disabled:bg-zinc-50" type="button" onClick={onClick} disabled={disabled}>
-      <span>
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="block text-[11px] text-zinc-500">{detail}</span>
-      </span>
-      <span className={`h-5 w-9 rounded-full p-0.5 ${on ? "bg-zinc-950" : "bg-zinc-200"}`}>
-        <span className={`block h-4 w-4 rounded-full bg-white transition ${on ? "translate-x-4" : ""}`} />
-      </span>
+    <button className={`rounded-full border px-3 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${on ? "border-[#1a1410] bg-[#1a1410] text-[#f6f1e8]" : "border-[#1a1410]/15 bg-transparent text-[#1a1410]/55"}`} type="button" onClick={onClick} disabled={disabled}>
+      {label}
     </button>
   );
 }
 
-function Thread({ conversation, onBack }: { conversation: InboxConversation | null; onBack: () => void }) {
+function Thread({ conversation, onBack, onDeal }: { conversation: InboxConversation | null; onBack: () => void; onDeal: () => void }) {
   if (!conversation) {
     return (
       <main className="grid flex-1 place-items-center px-8">
         <div className="max-w-md text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">Inbox</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1a1410]/40">Inbox</p>
           <h2 className="mt-3 font-serif text-4xl tracking-tight">Choose a thread</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-500">Sync Gmail or Instagram, then open a conversation. The deal card reads the terms beside it.</p>
+          <p className="mt-3 text-sm leading-6 text-[#1a1410]/55">Sync Gmail or Instagram, then open a conversation. The deal card reads the terms beside it.</p>
         </div>
       </main>
     );
   }
   const extraction = readingFor(conversation);
   return (
-    <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <header className="min-w-0 border-b border-zinc-200 bg-white px-5 py-4">
-        <button className="mb-3 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm md:hidden" type="button" onClick={onBack}>Back</button>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-700">{conversation.source === "gmail" ? "Gmail thread" : "Instagram DM"}</p>
-        <h2 className="mt-1 break-words font-serif text-3xl tracking-tight">{conversation.fromName}</h2>
-        <p className="mt-1 break-all text-sm text-zinc-500">{conversation.fromHandle}</p>
-        {conversation.subject ? <p className="mt-3 break-words text-sm font-medium">{conversation.subject}</p> : null}
+    <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#f7f3ec]">
+      <header className="flex min-w-0 shrink-0 items-start justify-between gap-3 border-b border-[#1a1410]/10 px-5 py-4">
+        <div className="min-w-0">
+          <button className="mb-3 rounded-full border border-[#1a1410]/15 px-3 py-1 text-sm md:hidden" type="button" onClick={onBack}>Back</button>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff5a36]">{conversation.source === "gmail" ? "Gmail thread" : "Instagram DM"}</p>
+          <h2 className="mt-1 break-words font-serif text-3xl tracking-tight">{conversation.fromName}</h2>
+          <p className="mt-1 break-all text-sm text-[#1a1410]/50">{conversation.fromHandle}</p>
+          {conversation.subject ? <p className="mt-3 break-words text-sm font-medium">{conversation.subject}</p> : null}
+        </div>
+        <button className="shrink-0 rounded-full bg-[#1a1410] px-3 py-1.5 text-xs font-semibold text-[#f6f1e8] lg:hidden" type="button" onClick={onDeal}>The deal</button>
       </header>
-      <div className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto px-5 py-5">
-        {conversation.messages.map((message, index) => (
-          <article className={`min-w-0 max-w-full rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${message.from === "you" ? "ml-auto max-w-xl bg-zinc-950 text-white" : "bg-white"}`} key={`${message.at}-${index}`}>
-            <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.text}</p>
-            <p className={`mt-2 text-xs ${message.from === "you" ? "text-zinc-400" : "text-zinc-400"}`}>{formatWhen(message.at)}</p>
-          </article>
-        ))}
-        <p className="text-sm text-zinc-500">{extraction.detectionReason}</p>
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={conversation.id}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.28 }}
+          className="min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto px-5 py-5"
+        >
+          {conversation.messages.map((message, index) => (
+            <article className={`min-w-0 max-w-full rounded-2xl px-4 py-3 text-sm leading-6 ${message.from === "you" ? "ml-auto max-w-xl bg-[#1a1410] text-[#f6f1e8]" : "bg-white"}`} key={`${message.at}-${index}`}>
+              <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.text}</p>
+              <p className={`mt-2 text-xs ${message.from === "you" ? "text-[#f6f1e8]/50" : "text-[#1a1410]/40"}`}>{formatWhen(message.at)}</p>
+            </article>
+          ))}
+          <p className="text-sm text-[#1a1410]/50">{extraction.detectionReason}</p>
+        </motion.div>
+      </AnimatePresence>
     </main>
   );
 }
@@ -544,6 +568,7 @@ function Deal({
   rules,
   rulesOpen,
   action,
+  onBack,
   onRulesOpen,
   onRule,
   onFollow,
@@ -560,6 +585,7 @@ function Deal({
   rules: RateRules;
   rulesOpen: boolean;
   action: Action;
+  onBack: () => void;
   onRulesOpen: (open: boolean) => void;
   onRule: (key: keyof RateRules, value: number) => void;
   onFollow: () => void;
@@ -572,15 +598,16 @@ function Deal({
   followers: number | null;
   onRewrite: () => void;
 }) {
-  const shell = "flex max-h-[46vh] min-h-0 flex-col overflow-y-auto border-t border-zinc-200 bg-white xl:max-h-none xl:border-t-0 xl:border-l";
+  const shell = "flex h-full min-h-0 min-w-0 w-full flex-col overflow-x-hidden overflow-y-auto border-[#1a1410]/10 bg-[#fffaf3] lg:border-l";
   if (!conversation) return <aside className={shell} />;
   const extraction = readingFor(conversation);
   if (!extraction.isBrandOpportunity) {
     return (
       <aside className={`${shell} px-6 py-8`}>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Reader</p>
+        <button className="mb-4 rounded-full border border-[#1a1410]/15 px-3 py-1 text-sm lg:hidden" type="button" onClick={onBack}>Back to the thread</button>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1a1410]/40">Reader</p>
         <h2 className="mt-2 font-serif text-3xl tracking-tight">No brand deal here</h2>
-        <p className="mt-3 text-sm leading-6 text-zinc-500">{extraction.detectionReason}</p>
+        <p className="mt-3 text-sm leading-6 text-[#1a1410]/55">{extraction.detectionReason}</p>
       </aside>
     );
   }
@@ -618,11 +645,12 @@ function Deal({
 
   return (
     <aside className={shell} aria-live="polite">
-      <div className="border-b border-zinc-100 px-5 py-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-700">The deal</p>
-        <h2 className="mt-1 font-serif text-3xl tracking-tight">{extraction.brand || extraction.campaign || "Untitled deal"}</h2>
+      <div className="sticky top-0 z-10 border-b border-[#1a1410]/10 bg-[#fffaf3] px-5 py-5">
+        <button className="mb-3 rounded-full border border-[#1a1410]/15 px-3 py-1 text-sm lg:hidden" type="button" onClick={onBack}>Back to the thread</button>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff5a36]">The deal</p>
+        <h2 className="mt-1 break-words font-serif text-3xl tracking-tight">{extraction.brand || extraction.campaign || "Untitled deal"}</h2>
       </div>
-      <div className="space-y-5 px-5 py-5">
+      <motion.div key={conversation.id} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35 }} className="space-y-5 px-5 py-5">
         <section className="rounded-2xl bg-orange-50 px-4 py-4">
           <p className="text-sm text-orange-950/70">{lead}</p>
           <p className="mt-1 font-serif text-2xl leading-tight tracking-tight text-orange-950">{main}</p>
@@ -686,7 +714,7 @@ function Deal({
             <button className="rounded-lg border border-white/20 px-3 py-2 text-sm" type="button" onClick={onAside}>Set aside</button>
           </div>
         </section>
-      </div>
+      </motion.div>
     </aside>
   );
 }
