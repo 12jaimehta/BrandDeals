@@ -34,9 +34,15 @@ const notices: Record<string, string> = {
   "x-denied": "X sign-in was cancelled.",
   "x-mismatch": "X sign-in expired. Connect it again.",
   "x-failed": "X didn't finish connecting. In the X app, the callback must be http://127.0.0.1:3000/auth/x/callback.",
-  "needs-channels-sql": "Run supabase/migrations/0003_channels.sql in the Supabase SQL editor, then connect X again.",
-  "whatsapp-unconfigured": "WhatsApp Business needs a Meta app with the WhatsApp product first. Keys are listed below.",
-  "messenger-unconfigured": "Messenger needs a Meta app with the Messenger product first. Keys are listed below.",
+  "needs-channels-sql": "Run supabase/migrations/0003_channels.sql in the Supabase SQL editor, then connect again.",
+  "whatsapp-unconfigured": "WhatsApp Business isn't set up yet.",
+  "messenger-https": "Facebook will not sign in over http. Open the https address for this site, then connect Messenger from there.",
+  "messenger-unconfigured": "Messenger isn't set up yet. Add the Messenger keys, then connect it again.",
+  messenger: "Messenger is connected.",
+  "messenger-denied": "Messenger sign-in was cancelled.",
+  "messenger-mismatch": "Messenger sign-in expired. Connect it again.",
+  "messenger-no-page": "That Facebook login has no Page. Messenger connects a Page you admin.",
+  "messenger-failed": "Messenger didn't finish connecting. In the Meta app, the callback must be the https address you opened, ending in /auth/messenger/callback.",
 };
 
 const setupHints: Record<string, string> = {
@@ -45,7 +51,7 @@ const setupHints: Record<string, string> = {
   whatsapp: "WhatsApp Business isn't available to connect yet.",
   outlook: "Outlook isn't available to connect yet.",
   x: "X isn't available to connect yet.",
-  messenger: "Messenger isn't available to connect yet.",
+  messenger: "Add MESSENGER_APP_ID and MESSENGER_APP_SECRET, then connect Messenger.",
 };
 
 export function ConnectApps({
@@ -170,7 +176,7 @@ export function ConnectApps({
       mark: "💬",
       name: "Messenger",
       detail: "Your Page inbox.",
-      live: false,
+      live: true,
       href: "/auth/messenger",
       connectLabel: "Connect Messenger",
     },

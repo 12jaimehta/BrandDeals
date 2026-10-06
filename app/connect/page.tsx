@@ -35,7 +35,7 @@ export default async function ConnectPage({
         whatsapp: false,
         outlook: false,
         x: viewer ? await hasProviderConnection(viewer.id, "x") : false,
-        messenger: false,
+        messenger: viewer ? await hasProviderConnection(viewer.id, "messenger") : false,
       }}
       configured={{
         gmail: publicConfig().configured,

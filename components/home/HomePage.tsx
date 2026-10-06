@@ -1,25 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 import {
   AnimatePresence,
+  LayoutGroup,
+  animate,
   motion,
+  useInView,
+  useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
+  useTransform,
 } from "framer-motion";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const sources = [
-  { name: "Gmail", detail: "Brand email, connected in one tap. Signing in creates your account.", state: "Live", live: true },
-  { name: "Instagram", detail: "DMs on a professional account, with message access you approve.", state: "Live", live: true },
-  { name: "WhatsApp Business", detail: "Your business inbox, next in line.", state: "Coming soon", live: false },
-  { name: "Outlook", detail: "Brand mail on Outlook and Hotmail.", state: "Coming soon", live: false },
-  { name: "X", detail: "Direct messages.", state: "Coming soon", live: false },
-  { name: "Messenger", detail: "Your Page inbox.", state: "Coming soon", live: false },
+  { name: "Gmail", detail: "Brand email.", state: "Live", live: true },
+  { name: "Instagram", detail: "DMs on a professional account.", state: "Live", live: true },
+  { name: "WhatsApp Business", detail: "Your business inbox.", state: "", live: false },
+  { name: "Outlook", detail: "Brand mail on Outlook and Hotmail.", state: "", live: false },
+  { name: "X", detail: "Direct messages.", state: "Live", live: true },
+  { name: "Messenger", detail: "Your Page inbox.", state: "Live", live: true },
 ];
 
 const beats = [
@@ -83,7 +89,7 @@ const faqs = [
   },
   {
     q: "Which inboxes can I connect?",
-    a: "Gmail and Instagram today. WhatsApp Business, Outlook, X and Messenger are ready to switch on — every inbox is optional, so connect only what you use.",
+    a: "Gmail, Instagram, WhatsApp Business, Outlook, X, and Messenger. Connect any one of them. None of the others are required.",
   },
 ];
 
@@ -140,6 +146,23 @@ function Reveal({ children, delay = 0, className }: { children: ReactNode; delay
   );
 }
 
+function rupees(value: number) {
+  return `₹${Math.round(value).toLocaleString("en-IN")}`;
+}
+
+function CountUp({ from, to, prefix = "", reduce }: { from: number; to: number; prefix?: string; reduce: boolean }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const value = useMotionValue(reduce ? to : from);
+  const text = useTransform(value, (v) => `${prefix}${rupees(v)}`);
+  useEffect(() => {
+    if (!inView || reduce) return;
+    const controls = animate(value, to, { duration: 1.4, delay: 0.7, ease });
+    return () => controls.stop();
+  }, [inView, reduce, to, value]);
+  return <motion.span ref={ref}>{text}</motion.span>;
+}
+
 function Kicker({ children }: { children: ReactNode }) {
   return (
     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#ff5a36]">
@@ -173,7 +196,7 @@ function Hero({ reduce }: { reduce: boolean }) {
         transition={{ delay: 0.3, duration: 0.6, ease }}
         className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#f6f1e8]/65"
       >
-        Connect Gmail and Instagram. The desk reads each brand offer, tells you the fair price, and writes the reply. You send it.
+Your AI agent for brand deals. It reads every offer, benchmarks the price, flags hidden terms, and prepares your best response.
       </motion.p>
 
       <motion.div
@@ -196,7 +219,7 @@ function Hero({ reduce }: { reduce: boolean }) {
         transition={{ delay: 0.55, duration: 0.6 }}
         className="mt-5 text-[11px] uppercase tracking-[0.18em] text-[#f6f1e8]/35"
       >
-        WhatsApp Business · Outlook · X · Messenger — coming soon
+        Gmail · Instagram · WhatsApp · Outlook · X · Messenger
       </motion.p>
 
       <motion.dl
@@ -205,16 +228,18 @@ function Hero({ reduce }: { reduce: boolean }) {
         transition={{ delay: 0.6, duration: 0.7 }}
         className="mx-auto mt-12 grid max-w-2xl grid-cols-3 divide-x divide-white/10 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur"
       >
-        {[
-          ["₹1,05,000", "Right price"],
-          ["+₹25,000", "Usage uplift"],
-          ["2 days", "Follow-up"],
-        ].map(([v, l]) => (
-          <div key={l} className="min-w-0 px-2 py-5 sm:px-4">
-            <dt className="whitespace-nowrap font-serif text-lg tracking-tight sm:text-2xl">{v}</dt>
-            <dd className="mt-1 text-[10px] uppercase leading-4 tracking-[0.14em] text-[#f6f1e8]/45">{l}</dd>
-          </div>
-        ))}
+        <div className="min-w-0 px-2 py-5 sm:px-4">
+          <dt className="whitespace-nowrap font-serif text-lg tracking-tight sm:text-2xl"><CountUp from={80000} to={105000} reduce={reduce} /></dt>
+          <dd className="mt-1 text-[10px] uppercase leading-4 tracking-[0.14em] text-[#f6f1e8]/45">From ₹80,000 offer</dd>
+        </div>
+        <div className="min-w-0 px-2 py-5 sm:px-4">
+          <dt className="whitespace-nowrap font-serif text-lg tracking-tight text-[#ff5a36] sm:text-2xl"><CountUp from={0} to={25000} prefix="+" reduce={reduce} /></dt>
+          <dd className="mt-1 text-[10px] uppercase leading-4 tracking-[0.14em] text-[#f6f1e8]/45">Usage uplift</dd>
+        </div>
+        <div className="min-w-0 px-2 py-5 sm:px-4">
+          <dt className="whitespace-nowrap font-serif text-lg tracking-tight sm:text-2xl">2 days</dt>
+          <dd className="mt-1 text-[10px] uppercase leading-4 tracking-[0.14em] text-[#f6f1e8]/45">Follow-up</dd>
+        </div>
       </motion.dl>
 
       <DeskMock reduce={reduce} />
@@ -332,12 +357,18 @@ function DeskMock({ reduce }: { reduce: boolean }) {
       );
     }
   }
+  const frame = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: frame, offset: ["start end", "center center"] });
+  const tilt = useTransform(scrollYProgress, [0, 1], [12, 0]);
+  const settle = useTransform(scrollYProgress, [0, 1], [0.94, 1]);
   return (
     <motion.div
-      initial={reduce ? false : { opacity: 0, y: 60, rotateX: 10 }}
-      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ duration: 1, delay: 0.5, ease }}
-      className="relative mx-auto mt-14 max-w-5xl [perspective:1200px]"
+      ref={frame}
+      initial={reduce ? false : { opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.9, delay: 0.5, ease }}
+      style={reduce ? undefined : { rotateX: tilt, scale: settle, transformPerspective: 1200 }}
+      className="relative mx-auto mt-14 max-w-5xl"
     >
       <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#ff5a36]/10 blur-[80px]" aria-hidden="true" />
       <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-[#1c1814]/95 text-left shadow-[0_60px_140px_-40px_rgba(0,0,0,0.9)]">
@@ -345,25 +376,33 @@ function DeskMock({ reduce }: { reduce: boolean }) {
           <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
           <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#ff5a36]" />
-          <span className="ml-3 text-xs text-[#f6f1e8]/40">brand-deal-inbox / deals</span>
+          <span className="ml-3 text-xs text-[#f6f1e8]/40">Inbox </span>
           <span className="ml-auto hidden items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[11px] text-[#f6f1e8]/60 sm:flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Auto sync on
           </span>
         </div>
         <div className="grid md:grid-cols-[220px_minmax(0,1fr)_250px]">
           <div className="hidden border-r border-white/10 p-3 md:block">
-            {mockFilters.map((f) => (
-              <button key={f.id} type="button" onClick={() => pickFilter(f.id)} className={`mb-1.5 block w-full rounded-xl px-3 py-2 text-left text-xs transition ${mockFilter === f.id ? "bg-[#f6f1e8] font-semibold text-[#14110e]" : "text-[#f6f1e8]/55 hover:bg-white/5 hover:text-white"}`}>
-                {f.label}
-              </button>
-            ))}
+            {mockFilters.map((f) => {
+              const on = mockFilter === f.id;
+              return (
+                <button key={f.id} type="button" onClick={() => pickFilter(f.id)} className={`relative mb-1.5 block w-full rounded-xl px-3 py-2 text-left text-xs transition-colors ${on ? "font-semibold text-[#14110e]" : "text-[#f6f1e8]/55 hover:text-white"}`}>
+                  {on ? <motion.span layoutId="mock-filter" className="absolute inset-0 rounded-xl bg-[#f6f1e8]" transition={{ type: "spring", stiffness: 420, damping: 34 }} /> : null}
+                  <span className="relative">{f.label}</span>
+                </button>
+              );
+            })}
             <div className="mt-3 space-y-1.5 px-1">
               <AnimatePresence mode="popLayout">
-                {listed.map(([id, t]) => (
-                  <motion.button key={id} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.25 }} type="button" onClick={() => pickThread(id)} className={`block w-full rounded-xl border px-3 py-2.5 text-left text-xs transition ${mockThread === id ? "border-[#ff5a36]/50 bg-[#ff5a36]/10 text-white" : "border-white/8 text-[#f6f1e8]/50 hover:border-white/20 hover:text-white"}`}>
-                    {t.tab}
-                  </motion.button>
-                ))}
+                {listed.map(([id, t]) => {
+                  const on = mockThread === id;
+                  return (
+                    <motion.button key={id} layout initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.25 }} type="button" onClick={() => pickThread(id)} className={`relative block w-full rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${on ? "border-[#ff5a36]/50 text-white" : "border-white/8 text-[#f6f1e8]/50 hover:border-white/20 hover:text-white"}`}>
+                      {on ? <motion.span layoutId="mock-thread" className="absolute inset-0 rounded-xl bg-[#ff5a36]/12" transition={{ type: "spring", stiffness: 420, damping: 34 }} /> : null}
+                      <span className="relative">{t.tab}</span>
+                    </motion.button>
+                  );
+                })}
               </AnimatePresence>
             </div>
           </div>
@@ -377,7 +416,17 @@ function DeskMock({ reduce }: { reduce: boolean }) {
                   {active.bubbles.map((bubble, i) => (
                     <div key={i} className="rounded-2xl rounded-tl-md bg-white/[0.07] p-3.5 text-[#f6f1e8]/85">
                       {bubble.map((seg, j) => seg.hot
-                        ? <span key={j} className="rounded bg-[#ff5a36]/25 px-1 text-white">{seg.text}</span>
+                        ? (
+                          <motion.span
+                            key={j}
+                            initial={reduce ? false : { backgroundColor: "rgba(255,90,54,0)" }}
+                            animate={{ backgroundColor: "rgba(255,90,54,0.25)" }}
+                            transition={{ duration: 0.4, delay: 0.25 + i * 0.25 + j * 0.06 }}
+                            className="rounded px-1 text-white"
+                          >
+                            {seg.text}
+                          </motion.span>
+                        )
                         : <span key={j}>{seg.text}</span>)}
                     </div>
                   ))}
@@ -390,15 +439,29 @@ function DeskMock({ reduce }: { reduce: boolean }) {
               <motion.div key={mockThread} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.28, ease }}>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c2410c]">The deal</p>
                 <p className="mt-1 font-serif text-2xl tracking-tight">{active.brand}</p>
-                <div className="mt-3 space-y-2 text-xs">
+                <motion.div
+                  className="mt-3 space-y-2 text-xs"
+                  initial={reduce ? false : "hidden"}
+                  animate="shown"
+                  variants={{ hidden: {}, shown: { transition: { staggerChildren: 0.12, delayChildren: 0.55 } } }}
+                >
                   {active.rows.map(([k, v]) => (
-                    <div key={k} className="flex items-center justify-between border-b border-[#14110e]/10 py-1.5">
+                    <motion.div
+                      key={k}
+                      variants={{ hidden: { opacity: 0, x: 10 }, shown: { opacity: 1, x: 0, transition: { duration: 0.3, ease } } }}
+                      className="flex items-center justify-between border-b border-[#14110e]/10 py-1.5"
+                    >
                       <span className="text-[#14110e]/50">{k}</span>
-                      <span className="font-semibold">{v}</span>
-                    </div>
+                      <span className={`font-semibold ${k === "Counter" ? "text-[#c2410c]" : ""}`}>{v}</span>
+                    </motion.div>
                   ))}
-                </div>
-                <div className="mt-3 rounded-2xl bg-[#14110e] p-3.5 text-xs leading-5 text-[#f6f1e8]">
+                </motion.div>
+                <motion.div
+                  initial={reduce ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.55 + active.rows.length * 0.12, ease }}
+                  className="mt-3 rounded-2xl bg-[#14110e] p-3.5 text-xs leading-5 text-[#f6f1e8]"
+                >
                   <span className="text-[#ff5a36]">Suggested reply —</span> {active.reply}
                   <span className="mt-2 flex justify-end">
                     <button type="button" onClick={copyReply} aria-label="Copy the suggested reply" className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-[#f6f1e8]/70 transition hover:border-[#ff5a36]/60 hover:text-white">
@@ -406,7 +469,7 @@ function DeskMock({ reduce }: { reduce: boolean }) {
                       {copied ? "Copied" : "Copy"}
                     </button>
                   </span>
-                </div>
+                </motion.div>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -456,6 +519,15 @@ function Ticker() {
 /* ---------- what it does ---------- */
 
 export function WhatWeDo() {
+  const reduce = useReducedMotion();
+  const grid = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: grid, offset: ["start 0.85", "end 0.55"] });
+  const fill = useSpring(scrollYProgress, { stiffness: 120, damping: 26 });
+  const [reached, setReached] = useState(reduce ? steps.length : 0);
+  useMotionValueEvent(scrollYProgress, "change", (p) => {
+    if (reduce) return;
+    setReached(Math.min(steps.length, Math.floor(p * steps.length + 0.35)));
+  });
   return (
     <section id="what" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24">
       <Reveal>
@@ -468,12 +540,17 @@ export function WhatWeDo() {
           opportunities, pull the terms out, price the usage, and get the reply and follow-up ready for your approval.
         </p>
       </Reveal>
-      <div className="mt-12 grid gap-4 md:grid-cols-2">
-        {steps.map((s, i) => (
+      <div className="mt-12 h-px w-full overflow-hidden bg-white/10" aria-hidden="true">
+        <motion.div className="h-full origin-left bg-[#ff5a36]" style={{ scaleX: reduce ? 1 : fill }} />
+      </div>
+      <div ref={grid} className="mt-6 grid gap-4 md:grid-cols-2">
+        {steps.map((s, i) => {
+          const lit = i < reached;
+          return (
           <Reveal key={s.n} delay={i * 0.05}>
-            <article className="group relative h-full overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-7 transition hover:border-[#ff5a36]/40">
+            <article className={`group relative h-full overflow-hidden rounded-3xl border bg-white/[0.03] p-7 transition-colors duration-500 hover:border-[#ff5a36]/40 ${lit ? "border-[#ff5a36]/30" : "border-white/10"}`}>
               <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#ff5a36]/0 blur-[60px] transition group-hover:bg-[#ff5a36]/15" />
-              <p className="font-serif text-5xl text-white/12 transition group-hover:text-[#ff5a36]/30">{s.n}</p>
+              <p className={`font-serif text-5xl transition-colors duration-500 ${lit ? "text-[#ff5a36]/70" : "text-white/12"}`}>{s.n}</p>
               <h3 className="mt-4 font-serif text-3xl tracking-tight">{s.title}</h3>
               <p className="mt-3 text-sm leading-7 text-[#f6f1e8]/60">{s.copy}</p>
               <ul className="mt-5 flex flex-wrap gap-2">
@@ -483,7 +560,8 @@ export function WhatWeDo() {
               </ul>
             </article>
           </Reveal>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -493,15 +571,20 @@ export function WhatWeDo() {
 
 export function ThreadDemo({ reduce }: { reduce: boolean }) {
   const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const section = useRef<HTMLElement>(null);
+  const visible = useInView(section, { margin: "-20%" });
+  const running = !reduce && !paused && visible;
   useEffect(() => {
-    if (reduce) return;
-    const t = window.setInterval(() => setIndex((c) => (c + 1) % beats.length), 2100);
-    return () => window.clearInterval(t);
-  }, [reduce]);
+    if (!running) return;
+    const t = window.setTimeout(() => setIndex((c) => (c + 1) % beats.length), 2600);
+    return () => window.clearTimeout(t);
+  }, [running, index]);
   const active: BeatId = beats[index].id;
+  const priced = active === "uplift" || active === "counter";
 
   return (
-    <section id="letter" className="mx-auto max-w-6xl scroll-mt-24 px-6 pb-8">
+    <section ref={section} id="letter" className="mx-auto max-w-6xl scroll-mt-24 px-6 pb-8">
       <Reveal>
         <Kicker>Live read · Samsung / Galaxy AI</Kicker>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
@@ -534,31 +617,56 @@ export function ThreadDemo({ reduce }: { reduce: boolean }) {
             <div className="mt-6 space-y-4 text-[15px] leading-8 text-[#14110e]/85">
               <p>We would love you on the Galaxy AI launch. The scope is <Beat on={active === "work"}>2 Reels and 3 Stories</Beat>. The fee is <Beat on={active === "offer"}>₹80,000</Beat>, with 50% advance on signing.</p>
               <p>We need usage rights for <Beat on={active === "usage"}>90 days</Beat> across paid and organic, and category exclusivity for 30 days. The live date needs to be on or before <Beat on={active === "follow"}>18 October</Beat>.</p>
-              <p className="border-l-2 border-[#ff5a36] pl-4 text-sm italic text-[#14110e]/60">They&apos;re asking for 90-day usage rights. Your normal rate should increase by ₹25,000. Suggested counter ₹1,05,000.</p>
+              <motion.p
+                animate={{ backgroundColor: priced ? "rgba(255,90,54,0.12)" : "rgba(255,90,54,0)", color: priced ? "rgba(20,17,14,0.9)" : "rgba(20,17,14,0.6)" }}
+                transition={{ duration: 0.35 }}
+                className="rounded-r-lg border-l-2 border-[#ff5a36] py-1 pl-4 text-sm italic"
+              >
+                They&apos;re asking for 90-day usage rights. Your normal rate should increase by <span className={active === "uplift" ? "font-semibold not-italic" : ""}>₹25,000</span>. Suggested counter <span className={active === "counter" ? "font-semibold not-italic" : ""}>₹1,05,000</span>.
+              </motion.p>
             </div>
             <p className="mt-auto pt-6 text-xs text-[#14110e]/40">Brand name taken from the sign-off — never the email domain. Blank terms stay blank.</p>
           </article>
         </Reveal>
-        <div className="flex flex-col gap-2.5">
-          <AnimatePresence mode="popLayout">
-            {beats.map((b) => {
-              const on = b.id === active;
-              return (
-                <motion.button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setIndex(beats.findIndex((x) => x.id === b.id))}
-                  animate={{ scale: on ? 1.02 : 1, opacity: on ? 1 : 0.72 }}
-                  transition={{ duration: 0.3, ease }}
-                  className={`rounded-2xl border p-4 text-left transition ${on ? "border-[#ff5a36]/60 bg-[#ff5a36]/12 shadow-[0_16px_50px_-20px_rgba(255,90,54,0.6)]" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"}`}
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5a36]">{b.label}</p>
-                  <p className="mt-1 font-serif text-2xl tracking-tight">{b.value}</p>
-                  <p className="mt-0.5 text-xs text-[#f6f1e8]/50">{b.hint}</p>
-                </motion.button>
-              );
-            })}
-          </AnimatePresence>
+        <div className="flex flex-col gap-2.5" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+          {beats.map((b, i) => {
+            const on = b.id === active;
+            return (
+              <motion.button
+                key={b.id}
+                type="button"
+                onClick={() => setIndex(i)}
+                onFocus={() => setPaused(true)}
+                onBlur={() => setPaused(false)}
+                animate={{ opacity: on ? 1 : 0.6 }}
+                transition={{ duration: 0.3, ease }}
+                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-colors hover:bg-white/[0.06]"
+              >
+                {on ? (
+                  <motion.span
+                    layoutId="beat-focus"
+                    className="absolute inset-0 rounded-2xl border border-[#ff5a36]/60 bg-[#ff5a36]/12"
+                    transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                  />
+                ) : null}
+                <span className="relative block">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5a36]">{b.label}</span>
+                  <span className="mt-1 block font-serif text-2xl tracking-tight">{b.value}</span>
+                  <span className="mt-0.5 block text-xs text-[#f6f1e8]/50">{b.hint}</span>
+                </span>
+                {on && running ? (
+                  <motion.span
+                    key={index}
+                    className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-[#ff5a36]"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: 2.6, ease: "linear" }}
+                  />
+                ) : null}
+              </motion.button>
+            );
+          })}
+          <p className="px-1 text-xs text-[#f6f1e8]/35">{paused ? "Paused. Tap a term to see where it came from." : "Hover to pause."}</p>
         </div>
       </div>
     </section>
@@ -567,13 +675,16 @@ export function ThreadDemo({ reduce }: { reduce: boolean }) {
 
 function Beat({ on, children }: { on: boolean; children: ReactNode }) {
   return (
-    <motion.span
-      animate={{ backgroundColor: on ? "rgba(255,90,54,0.28)" : "rgba(255,90,54,0)" }}
-      transition={{ duration: 0.3 }}
-      className="rounded px-1 font-medium text-[#14110e]"
-    >
-      {children}
-    </motion.span>
+    <span className="relative inline-block rounded px-1 font-medium text-[#14110e]">
+      <motion.span
+        aria-hidden="true"
+        className="absolute inset-0 origin-left rounded bg-[#ff5a36]/28"
+        initial={false}
+        animate={{ scaleX: on ? 1 : 0 }}
+        transition={{ duration: 0.45, ease }}
+      />
+      <span className="relative">{children}</span>
+    </span>
   );
 }
 
@@ -589,6 +700,15 @@ export function RateLab() {
     const blocks = extra === 0 ? 0 : Math.ceil(extra / 30);
     return { extra, blocks, amount: blocks * per, counter: offer + blocks * per };
   }, [offer, usage]);
+  const reduce = useReducedMotion();
+  const counterValue = useSpring(calc.counter, { stiffness: 160, damping: 24 });
+  const counterText = useTransform(counterValue, rupees);
+  useEffect(() => {
+    if (reduce) counterValue.jump(calc.counter);
+    else counterValue.set(calc.counter);
+  }, [calc.counter, counterValue, reduce]);
+  const offerShare = calc.counter === 0 ? 100 : (offer / calc.counter) * 100;
+  const pips = Math.min(calc.blocks, 12);
 
   return (
     <section id="rates" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24">
@@ -617,22 +737,41 @@ export function RateLab() {
                 </div>
               ))}
             </div>
+            <div className="mt-6">
+              <p className="text-xs text-[#f6f1e8]/45">Each block is 30 extra days at ₹{per.toLocaleString("en-IN")}.</p>
+              <div className="mt-2 flex min-h-6 flex-wrap items-center gap-1.5">
+                <span className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-[#f6f1e8]/60">{included} days included</span>
+                <AnimatePresence initial={false}>
+                  {Array.from({ length: pips }, (_, i) => (
+                    <motion.span
+                      key={i}
+                      layout
+                      initial={{ opacity: 0, scale: 0.6 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.6 }}
+                      transition={{ duration: 0.2 }}
+                      className="rounded-md bg-[#ff5a36]/80 px-2 py-1 text-[11px] font-semibold text-[#14110e]"
+                    >
+                      +30
+                    </motion.span>
+                  ))}
+                </AnimatePresence>
+                {calc.blocks > pips ? <span className="text-[11px] text-[#f6f1e8]/50">+{calc.blocks - pips} more</span> : null}
+              </div>
+            </div>
           </div>
           <div className="flex flex-col justify-between rounded-3xl bg-[#f6f1e8] p-7 text-[#14110e]">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#c2410c]">Suggested counter</p>
-              <AnimatePresence mode="popLayout">
-                <motion.p
-                  key={calc.counter}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3, ease }}
-                  className="mt-2 font-serif text-5xl tracking-tight"
-                >
-                  ₹{calc.counter.toLocaleString("en-IN")}
-                </motion.p>
-              </AnimatePresence>
+              <motion.p className="mt-2 font-serif text-5xl tabular-nums tracking-tight">{counterText}</motion.p>
+              <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-[#14110e]/10" aria-hidden="true">
+                <motion.div className="h-full bg-[#14110e]" animate={{ width: `${offerShare}%` }} transition={{ type: "spring", stiffness: 160, damping: 24 }} />
+                <motion.div className="h-full bg-[#ff5a36]" animate={{ width: `${100 - offerShare}%` }} transition={{ type: "spring", stiffness: 160, damping: 24 }} />
+              </div>
+              <div className="mt-2 flex justify-between text-[11px] text-[#14110e]/55">
+                <span>Their offer</span>
+                <span className="text-[#c2410c]">Usage uplift</span>
+              </div>
               <p className="mt-3 text-sm leading-6 text-[#14110e]/60">
                 {usage} asked − {included} included = {calc.extra} extra days = {calc.blocks} blocks.
                 The Samsung default lands on ₹1,05,000.
@@ -672,19 +811,93 @@ function Slider({ label, value, min, max, step, format, onChange }: { label: str
 
 /* ---------- bento ---------- */
 
+const demoDeals = [
+  { brand: "boAt", fee: 120000 },
+  { brand: "Samsung", fee: 80000 },
+  { brand: "Brightline", fee: 15000 },
+  { brand: "Nykaa", fee: null },
+] as const;
+
+function MinimumDemo() {
+  const [minimum, setMinimum] = useState(50000);
+  const above = demoDeals.filter((d) => d.fee == null || d.fee >= minimum);
+  const below = demoDeals.filter((d) => d.fee != null && d.fee < minimum);
+  const column = (label: string, items: readonly (typeof demoDeals)[number][], dim: boolean) => (
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+      <p className="text-[11px] uppercase tracking-[0.12em] text-[#f6f1e8]/45">{label} · {items.length}</p>
+      <div className="mt-2 flex min-h-[76px] flex-col gap-1.5">
+        {items.map((d) => (
+          <motion.div
+            key={d.brand}
+            layoutId={`demo-${d.brand}`}
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            className={`flex items-center justify-between rounded-xl px-3 py-1.5 text-xs ${dim ? "bg-white/5 text-[#f6f1e8]/45" : "bg-white/10 text-[#f6f1e8]"}`}
+          >
+            <span>{d.brand}</span>
+            <span className={d.fee == null ? "text-[#ff5a36]" : ""}>{d.fee == null ? "No fee yet" : rupees(d.fee)}</span>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+  return (
+    <div className="mt-6">
+      <label className="flex items-center justify-between text-xs text-[#f6f1e8]/60">
+        <span>Your minimum</span>
+        <span className="font-semibold text-[#f6f1e8]">{rupees(minimum)}</span>
+      </label>
+      <input type="range" min={10000} max={150000} step={5000} value={minimum} onChange={(e) => setMinimum(Number(e.target.value))} className="mt-2 w-full accent-[#ff5a36]" aria-label="Minimum fee" />
+      <LayoutGroup>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {column("Brand deals", above, false)}
+          {column("Below your rate", below, true)}
+        </div>
+      </LayoutGroup>
+    </div>
+  );
+}
+
+function FollowUpDemo() {
+  const [tomorrow, setTomorrow] = useState(false);
+  const days = tomorrow ? 1 : 2;
+  return (
+    <div className="mt-5">
+      <button type="button" onClick={() => setTomorrow((t) => !t)} className="w-full rounded-2xl border border-white/10 bg-black/20 p-3 text-left text-xs text-[#f6f1e8]/70 transition-colors hover:border-[#ff5a36]/40">
+        <span className="text-[#f6f1e8]/40">Last message: </span>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span key={String(tomorrow)} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2 }} className="inline-block">
+            {tomorrow ? "“We'll confirm tomorrow.”" : "“Let us check internally.”"}
+          </motion.span>
+        </AnimatePresence>
+        <span className="mt-1 block text-[11px] text-[#ff5a36]">Tap to change it</span>
+      </button>
+      <div className="mt-3 flex items-center gap-2">
+        {[1, 2].map((d) => (
+          <span key={d} className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+            <motion.span className="absolute inset-0 origin-left bg-[#ff5a36]" initial={false} animate={{ scaleX: d <= days ? 1 : 0 }} transition={{ duration: 0.35, ease }} />
+          </span>
+        ))}
+        <span className="w-24 text-right text-xs font-semibold">Follow up in {days} {days === 1 ? "day" : "days"}</span>
+      </div>
+    </div>
+  );
+}
+
 function Bento() {
-  const cards = [
+  const cards: { title: string; copy: string; tag: string; big: boolean; demo?: ReactNode }[] = [
     {
       title: "Below your rate, automatically",
       copy: "Set a minimum in rupees. Anything priced under it leaves Brand deals for Below your rate. Your 20M-follower floor and a 20k-follower floor are finally different numbers — and your audience suggests the starting point.",
       tag: "Filtration",
       big: true,
+      demo: <MinimumDemo />,
     },
     {
       title: "Follow up in 2 days. Or 1.",
       copy: "The desk sets the wait from the last message — “tomorrow” means 1 day, everything else 2. Reminders live on this device.",
       tag: "Timing",
       big: false,
+      demo: <FollowUpDemo />,
     },
     {
       title: "Unpriced briefs stay visible",
@@ -718,6 +931,7 @@ function Bento() {
               <p className="inline-block rounded-full bg-[#ff5a36]/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff5a36]">{c.tag}</p>
               <h3 className={`mt-4 font-serif tracking-tight ${c.big ? "text-3xl sm:text-4xl" : "text-2xl"}`}>{c.title}</h3>
               <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/60">{c.copy}</p>
+              {c.demo}
             </article>
           </Reveal>
         ))}
@@ -744,9 +958,9 @@ function Inboxes() {
           <div>
             <Kicker>Inboxes</Kicker>
             <h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-6xl">Where the deals land</h2>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Gmail and Instagram today. WhatsApp Business, Outlook, X and Messenger are coming soon — every inbox in one desk.</p>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Connect any of the six. The desk reads the ones you add.</p>
           </div>
-          <Link href="/connect" className="rounded-full bg-[#f6f1e8] px-5 py-2.5 text-sm font-semibold text-[#14110e] hover:bg-white">Add yours</Link>
+          <Link href="/connect" className="rounded-full bg-[#f6f1e8] px-5 py-2.5 text-sm font-semibold text-[#14110e] hover:bg-white">Connect inboxes</Link>
         </div>
       </Reveal>
       <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -755,7 +969,7 @@ function Inboxes() {
             <div className="h-full rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition hover:-translate-y-1 hover:border-[#ff5a36]/40">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-serif text-2xl">{s.name}</h3>
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.live ? "bg-[#ff5a36] text-[#14110e]" : "bg-white/10 text-[#f6f1e8]/60"}`}>{s.state}</span>
+                {/* <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.live ? "bg-[#ff5a36] text-[#14110e]" : "bg-white/10 text-[#f6f1e8]/60"}`}>{s.state}</span> */}
               </div>
               <p className="mt-2 text-sm leading-6 text-[#f6f1e8]/50">{s.detail}</p>
             </div>
