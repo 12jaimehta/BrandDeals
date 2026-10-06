@@ -7,7 +7,7 @@ import {
   whatsappConfig,
   xConfig,
 } from "@/lib/config";
-import { hasAnyInbox } from "@/lib/any-inbox";
+import { hasAnyInbox, hasProviderConnection } from "@/lib/any-inbox";
 import { hasGmailConnection } from "@/lib/gmail-status";
 import { hasInstagramConnection } from "@/lib/instagram-status";
 import { getViewer } from "@/lib/viewer";
@@ -34,7 +34,7 @@ export default async function ConnectPage({
         instagram: instagramConnected,
         whatsapp: false,
         outlook: false,
-        x: false,
+        x: viewer ? await hasProviderConnection(viewer.id, "x") : false,
         messenger: false,
       }}
       configured={{

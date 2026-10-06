@@ -12,6 +12,23 @@ export async function hasAnyInbox(userId: string) {
   return gmail || instagram || channel;
 }
 
+export async function hasProviderConnection(userId: string, provider: string) {
+  if (!secretKey()) return false;
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("channel_connections")
+      .select("provider")
+      .eq("user_id", userId)
+      .eq("provider", provider)
+      .maybeSingle();
+    if (error) return false;
+    return Boolean(data);
+  } catch {
+    return false;
+  }
+}
+
 async function hasChannelConnection(userId: string) {
   if (!secretKey()) return false;
   try {
