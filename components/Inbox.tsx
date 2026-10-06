@@ -408,7 +408,7 @@ export function Inbox({
           ) : (
             <a className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3 py-1.5 text-sm font-semibold text-[#14110e]" href="/login"><span className="sm:hidden">Sign in</span><span className="hidden sm:inline">Sign in to sync</span></a>
           )}
-          {email ? <a className="hidden rounded-full px-2 py-1.5 text-sm text-[#f6f1e8]/50 hover:text-white sm:inline" href="/auth/sign-out">Sign out</a> : null}
+          {email ? <a className="rounded-full px-2 py-1.5 text-sm text-[#f6f1e8]/70 hover:text-white" href="/auth/sign-out">Sign out</a> : null}
         </nav>
       </header>
 

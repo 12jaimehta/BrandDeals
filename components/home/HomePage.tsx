@@ -86,7 +86,7 @@ const faqs = [
   },
 ];
 
-export function HomePage() {
+export function HomePage({ email }: { email: string | null }) {
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll();
   const bar = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.2 });
@@ -94,9 +94,9 @@ export function HomePage() {
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#14110e] text-[#f6f1e8] antialiased">
       <div className="site-grain" aria-hidden="true" />
-      {/* <motion.div className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-[#ff5a36]" style={{ scaleX: reduce ? 0 : bar }} /> */}
+      <motion.div className="fixed inset-x-0 top-0 z-50 h-0.5 origin-left bg-[#ff5a36]" style={{ scaleX: reduce ? 0 : bar }} />
       <Backdrop />
-      <Nav />
+      <Nav email={email} />
       <main className="relative z-10">
         <Hero reduce={Boolean(reduce)} />
         <Ticker />
@@ -136,7 +136,7 @@ function Backdrop() {
   );
 }
 
-function Nav() {
+function Nav({ email }: { email: string | null }) {
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-[#14110e]/78 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
@@ -149,7 +149,14 @@ function Nav() {
           <a href="#letter" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white sm:inline">Live read</a>
           <a href="#rates" className="hidden rounded-lg px-3 py-2 text-[#f6f1e8]/60 hover:text-white md:inline">Rate engine</a>
           <Link href="/connect" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Inboxes</Link>
-          <Link href="/login" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Sign in</Link>
+          {email ? (
+            <>
+              <span className="hidden max-w-40 truncate px-2 text-xs text-[#f6f1e8]/50 xl:inline">{email}</span>
+              <a href="/auth/sign-out" className="rounded-lg px-3 py-2 text-[#f6f1e8]/70 hover:text-white">Sign out</a>
+            </>
+          ) : (
+            <Link href="/login" className="rounded-lg px-3 py-2 text-[#f6f1e8]/80 hover:text-white">Sign in</Link>
+          )}
           <Link href="/deals" className="ml-1 whitespace-nowrap rounded-full bg-[#f6f1e8] px-3.5 py-2 font-medium text-[#14110e] hover:bg-white">Open desk</Link>
         </nav>
       </div>
@@ -759,7 +766,7 @@ function Bento() {
           <Link href="/deals" className="flex h-full min-h-[220px] flex-col justify-between overflow-hidden rounded-3xl bg-[#ff5a36] p-7 text-[#14110e] transition hover:bg-[#ff7a5c]">
             <p className="font-serif text-3xl tracking-tight">Open the desk and read your first thread.</p>
             <span className="mt-6 inline-flex w-fit items-center gap-2 rounded-full bg-[#14110e] px-4 py-2.5 text-sm font-semibold text-[#f6f1e8]">
-              Go to /deals <span aria-hidden="true">→</span>
+              Go to Deals <span aria-hidden="true">→</span>
             </span>
           </Link>
         </Reveal>
