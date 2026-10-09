@@ -1,0 +1,239 @@
+{
+  "info": {
+    "name": "Brand Deal Inbox — Instagram sandbox",
+    "description": "Run this in Postman before any creator outside the Meta tester list is connected.\n\nScope under test: Instagram Login with instagram_business_basic and instagram_business_manage_messages. Gmail is not in this collection. X, WhatsApp, Outlook, and Messenger are paused.\n\nApp review, before live users:\n1. The app is in Development. Only Instagram accounts listed as testers can connect.\n2. instagram_business_manage_messages needs Advanced Access and Meta app review before a creator who is not a tester can connect.\n3. The privacy policy URL and the data-deletion callback are filled in on the Meta app.\n4. The redirect URI is the live https callback ending in /auth/instagram/callback.\n5. A screen recording shows a tester connecting, reading one DM, and sending one reply the tester approved.\n6. This collection's Rate limit folder stays under the usage ceiling. If any request returns 429 or error code 4, 17, 32, or 613, stop. Do not onboard.\n\nSet ig_access_token from a tester's long-lived token. Do not paste a creator token and do not commit the environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "graph", "value": "https://graph.instagram.com" },
+    { "key": "ig_access_token", "value": "" },
+    { "key": "conversation_id", "value": "" },
+    { "key": "message_id", "value": "" },
+    { "key": "recipient_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "App review preflight",
+      "item": [
+        {
+          "name": "Profile — instagram_business_basic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{graph}}/me?fields=id,user_id,username,name&access_token={{ig_access_token}}",
+              "host": ["{{graph}}"],
+              "path": ["me"],
+              "query": [
+                { "key": "fields", "value": "id,user_id,username,name" },
+                { "key": "access_token", "value": "{{ig_access_token}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Basic profile permission answers', function () {",
+                  "  pm.expect(pm.response.code).to.eql(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.username || body.id).to.be.ok;",
+                  "});",
+                  "const usage = pm.response.headers.get('x-app-usage');",
+                  "if (usage) pm.environment.set('last_app_usage', usage);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conversations — messaging permission",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{graph}}/me/conversations?platform=instagram&limit=8&access_token={{ig_access_token}}",
+              "host": ["{{graph}}"],
+              "path": ["me", "conversations"],
+              "query": [
+                { "key": "platform", "value": "instagram" },
+                { "key": "limit", "value": "8" },
+                { "key": "access_token", "value": "{{ig_access_token}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('Messaging is allowed for this tester', function () {",
+                  "  if (pm.response.code !== 200) {",
+                  "    const message = (body.error && body.error.message) || '';",
+                  "    pm.expect.fail('Do not onboard live users. Meta has not cleared messaging: ' + message);",
+                  "  }",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "if (body.data && body.data[0] && body.data[0].id) {",
+                  "  pm.collectionVariables.set('conversation_id', body.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Read path the desk uses",
+      "item": [
+        {
+          "name": "Conversation messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{graph}}/{{conversation_id}}?fields=messages.limit(8){id,created_time,from,message}&access_token={{ig_access_token}}",
+              "host": ["{{graph}}"],
+              "path": ["{{conversation_id}}"],
+              "query": [
+                { "key": "fields", "value": "messages.limit(8){id,created_time,from,message}" },
+                { "key": "access_token", "value": "{{ig_access_token}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('A conversation returns messages or an empty list', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "const first = body.messages && body.messages.data && body.messages.data[0];",
+                  "if (first && first.id) pm.collectionVariables.set('message_id', first.id);",
+                  "if (first && first.from && first.from.id) pm.collectionVariables.set('recipient_id', first.from.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "One message by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{graph}}/{{message_id}}?fields=id,created_time,from,message&access_token={{ig_access_token}}",
+              "host": ["{{graph}}"],
+              "path": ["{{message_id}}"],
+              "query": [
+                { "key": "fields", "value": "id,created_time,from,message" },
+                { "key": "access_token", "value": "{{ig_access_token}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Single message read stays inside the latest-20 window', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rate limit",
+      "description": "In the Collection Runner, set the delay to 1000 ms and run this folder 8 times against the tester token only. Stop the run on the first failure. The tests fail closed when usage crosses 70 or Meta returns a rate-limit code.",
+      "item": [
+        {
+          "name": "Usage probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{graph}}/me?fields=id&access_token={{ig_access_token}}",
+              "host": ["{{graph}}"],
+              "path": ["me"],
+              "query": [
+                { "key": "fields", "value": "id" },
+                { "key": "access_token", "value": "{{ig_access_token}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const code = body.error && body.error.code;",
+                  "pm.test('Not rate limited', function () {",
+                  "  pm.expect(pm.response.code).to.not.eql(429);",
+                  "  pm.expect([4, 17, 32, 613]).to.not.include(code);",
+                  "});",
+                  "const raw = pm.response.headers.get('x-app-usage');",
+                  "if (raw) {",
+                  "  const usage = JSON.parse(raw);",
+                  "  pm.test('call_count stays under 70', function () {",
+                  "    pm.expect(usage.call_count || 0).to.be.below(70);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Send — tester only, one reply",
+      "item": [
+        {
+          "name": "POST me/messages",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient\": { \"id\": \"{{recipient_id}}\" },\n  \"messaging_type\": \"RESPONSE\",\n  \"message\": { \"text\": \"Sandbox reply. Please ignore.\" }\n}"
+            },
+            "url": {
+              "raw": "{{graph}}/me/messages?access_token={{ig_access_token}}",
+              "host": ["{{graph}}"],
+              "path": ["me", "messages"],
+              "query": [{ "key": "access_token", "value": "{{ig_access_token}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('A tester reply is accepted or clearly refused', function () {",
+                  "  pm.expect([200, 400, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -24,13 +24,14 @@ import {
   formatWhen,
   listGaps,
   recommendedWaitDays,
-  suggestedMinimum,
   suggestedReply,
   toISODate,
   type Conversation,
   type Extraction,
   type RateRules,
 } from "@/lib/read-deal.mjs";
+import { medianFee, type HistoricalFee, type PublicBaseline } from "@/lib/benchmarks.mjs";
+import { closeCut } from "@/lib/commercial.mjs";
 
 type Reader = "rules" | "openai";
 type InboxConversation = Conversation & { extraction?: Extraction; reader?: Reader };
@@ -48,6 +49,12 @@ const STORAGE_RULES = "brand-deal-inbox:rules";
 const STORAGE_ACTIONS = "brand-deal-inbox:actions";
 const STORAGE_SOURCES = "brand-deal-inbox:sources";
 const STORAGE_AUTO = "brand-deal-inbox:auto-sync";
+const STORAGE_HISTORY = "brand-deal-inbox:history";
+const STORAGE_PLAN = "brand-deal-inbox:plan";
+const STORAGE_CLOSES = "brand-deal-inbox:closes";
+
+type PlanId = "deal-share" | "agency";
+type ClosedDeal = HistoricalFee & { cut: number; plan: PlanId; conversationId: string };
 const REPLY_WAIT_DAYS = 2;
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -55,6 +62,15 @@ const snap = { type: "spring", stiffness: 420, damping: 36 } as const;
 
 function emptyAction(): Action {
   return { seen: false, followUpAt: null, followUpDays: null, followedUp: false, dismissed: false };
+}
+
+function loadList<T>(key: string): T[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "[]") as unknown;
+    return Array.isArray(parsed) ? parsed as T[] : [];
+  } catch {
+    return [];
+  }
 }
 
 function loadJson<T>(key: string, fallback: T): T {
@@ -150,6 +166,11 @@ export function Inbox({
   const [sources, setSources] = useState<Record<SourceKey, boolean>>({ gmail: true, instagram: true });
   const [autoSync, setAutoSync] = useState(true);
   const [followers, setFollowers] = useState<number | null>(null);
+  const [history, setHistory] = useState<HistoricalFee[]>([]);
+  const [plan, setPlan] = useState<PlanId>("deal-share");
+  const [closes, setCloses] = useState<ClosedDeal[]>([]);
+  const [baseline, setBaseline] = useState<PublicBaseline | null>(null);
+  const [baselineNote, setBaselineNote] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [aiDrafts, setAiDrafts] = useState<Record<string, string>>({});
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -167,6 +188,10 @@ export function Inbox({
     setRules({ ...DEFAULT_RULES, ...storedRules });
     setActions(loadJson<Record<string, Action>>(STORAGE_ACTIONS, {}));
     setSources(loadJson<Record<SourceKey, boolean>>(STORAGE_SOURCES, { gmail: true, instagram: true }));
+    setHistory(loadList<HistoricalFee>(STORAGE_HISTORY));
+    setCloses(loadList<ClosedDeal>(STORAGE_CLOSES));
+    const storedPlan = localStorage.getItem(STORAGE_PLAN);
+    if (storedPlan === "agency" || storedPlan === "deal-share") setPlan(storedPlan);
     const storedAuto = localStorage.getItem(STORAGE_AUTO);
     if (storedAuto != null) setAutoSync(storedAuto === "true");
     const notices: Record<string, string> = {
@@ -331,8 +356,16 @@ export function Inbox({
     if (!instagramReady) return;
     fetch("/api/instagram/audience")
       .then((response) => response.json())
-      .then((body: { followers?: number | null }) => {
+      .then((body: { followers?: number | null; username?: string | null }) => {
         if (typeof body.followers === "number") setFollowers(body.followers);
+        if (!body.username) return;
+        fetch(`/api/benchmarks?username=${encodeURIComponent(body.username)}`)
+          .then((response) => response.json())
+          .then((priced: { baseline?: PublicBaseline | null; reason?: string | null }) => {
+            setBaseline(priced.baseline ?? null);
+            setBaselineNote(priced.reason ?? null);
+          })
+          .catch(() => setBaselineNote("The pricing source did not answer. No number was filled in."));
       })
       .catch(() => undefined);
   }, [instagramReady]);
@@ -362,6 +395,43 @@ export function Inbox({
   function toggleAuto(next: boolean) {
     setAutoSync(next);
     localStorage.setItem(STORAGE_AUTO, String(next));
+  }
+
+  function choosePlan(next: PlanId) {
+    setPlan(next);
+    localStorage.setItem(STORAGE_PLAN, next);
+  }
+
+  function addHistory(entry: HistoricalFee) {
+    const next = [entry, ...history].slice(0, 50);
+    setHistory(next);
+    localStorage.setItem(STORAGE_HISTORY, JSON.stringify(next));
+    const floor = medianFee(next);
+    if (floor) {
+      const rulesNext = { ...rules, minimumOffer: floor };
+      setRules(rulesNext);
+      localStorage.setItem(STORAGE_RULES, JSON.stringify(rulesNext));
+    }
+    return floor;
+  }
+
+  function recordClose(conversationId: string, brand: string, fee: number, deliverables: string) {
+    const settled = closeCut(plan, fee);
+    const entry: HistoricalFee = {
+      id: crypto.randomUUID(),
+      brand,
+      fee,
+      deliverables,
+      closedOn: new Date().toISOString().slice(0, 10),
+    };
+    const floor = addHistory(entry);
+    const closed: ClosedDeal = { ...entry, cut: settled.cut, plan, conversationId };
+    const next = [closed, ...closes].slice(0, 100);
+    setCloses(next);
+    localStorage.setItem(STORAGE_CLOSES, JSON.stringify(next));
+    const cutLabel = settled.cut > 0 ? ` ${formatINR(settled.cut)} recorded.` : "";
+    const floorLabel = floor ? ` Floor is now ${formatINR(floor)} from ${history.length + 1} closed fees.` : "";
+    setToast(`${settled.note}${cutLabel}${floorLabel}`);
   }
 
   function dropEdit(id: string) {
@@ -581,6 +651,17 @@ export function Inbox({
                 onSend={(draft) => { if (selected) void sendReply(selected, draft); }}
                 sending={selected ? sendingId === selected.id : false}
                 followers={followers}
+                historyFloor={medianFee(history)}
+                historyCount={history.length}
+                baseline={baseline}
+                baselineNote={baselineNote}
+                plan={plan}
+                onPlan={choosePlan}
+                closedCut={selected ? closes.find((item) => item.conversationId === selected.id) ?? null : null}
+                onClose={(fee, deliverables) => {
+                  if (!selected) return;
+                  recordClose(selected.id, readingFor(selected).brand || selected.fromName, fee, deliverables);
+                }}
                 onRewrite={() => { if (selected) void rewriteDraft(selected); }}
                 onCopy={(draft) => {
                   if (navigator.clipboard?.writeText) {
@@ -863,6 +944,14 @@ function Deal({
   onSend,
   sending,
   followers,
+  historyFloor,
+  historyCount,
+  baseline,
+  baselineNote,
+  plan,
+  onPlan,
+  closedCut,
+  onClose,
   onRewrite,
 }: {
   conversation: InboxConversation | null;
@@ -885,10 +974,19 @@ function Deal({
   onSend: (draft: string) => void;
   sending: boolean;
   followers: number | null;
+  historyFloor: number | null;
+  historyCount: number;
+  baseline: PublicBaseline | null;
+  baselineNote: string | null;
+  plan: PlanId;
+  onPlan: (plan: PlanId) => void;
+  closedCut: ClosedDeal | null;
+  onClose: (fee: number, deliverables: string) => void;
   onRewrite: () => void;
 }) {
   const [confirmSend, setConfirmSend] = useState(false);
-  useEffect(() => { setConfirmSend(false); }, [conversation?.id]);
+  const [closeFee, setCloseFee] = useState("");
+  useEffect(() => { setConfirmSend(false); setCloseFee(""); }, [conversation?.id]);
   const shell = "flex h-full min-h-0 min-w-0 w-full flex-col overflow-x-hidden overflow-y-auto border-white/10 bg-[#f6f1e8] text-[#14110e] lg:border-l";
   if (!conversation) return <aside className={shell} />;
   const extraction = readingFor(conversation);
@@ -906,7 +1004,6 @@ function Deal({
   const advice = buildAdvice(extraction, rules);
   const underFloor = belowMinimum(extraction, rules.minimumOffer);
   const unpriced = extraction.offerAmount == null && rules.minimumOffer > 0;
-  const audienceFloor = suggestedMinimum(followers);
   const waitDays = recommendedWaitDays(conversation);
   const offerLabel = extraction.offerAmount == null ? null : `${extraction.offerApproximate ? "≈ " : ""}${formatINR(extraction.offerAmount)}`;
   const baseDraft = aiDraft || suggestedReply(conversation, extraction, advice, rules);
@@ -1081,6 +1178,37 @@ function Deal({
           </div>
         </section>
 
+        <section className="rounded-2xl border border-[#14110e]/12 bg-white px-4 py-4">
+          <h3 className="text-sm font-semibold">When it closes</h3>
+          <p className="mt-1 text-xs leading-5 text-[#14110e]/55">
+            {plan === "agency" ? "Agency plan. The close is recorded and no percentage is added." : "Deal-share plan. 8% of the agreed fee is recorded. Nothing is charged in the app yet."}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={() => onPlan("deal-share")} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${plan === "deal-share" ? "bg-[#14110e] text-[#f6f1e8]" : "border border-[#14110e]/15"}`}>8% of closes</button>
+            <button type="button" onClick={() => onPlan("agency")} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${plan === "agency" ? "bg-[#14110e] text-[#f6f1e8]" : "border border-[#14110e]/15"}`}>Agency plan</button>
+          </div>
+          {closedCut ? (
+            <p className="mt-3 text-sm">Closed at {formatINR(closedCut.fee)}. {closedCut.cut > 0 ? `${formatINR(closedCut.cut)} recorded.` : "No percentage on this close."}</p>
+          ) : (
+            <form className="mt-3 flex flex-wrap items-center gap-2" onSubmit={(event) => {
+              event.preventDefault();
+              const fee = Number(closeFee || extraction.offerAmount);
+              if (!Number.isFinite(fee) || fee <= 0) return;
+              onClose(fee, extraction.deliverables.join(" + "));
+            }}>
+              <input
+                inputMode="numeric"
+                value={closeFee}
+                onChange={(event) => setCloseFee(event.target.value)}
+                placeholder={extraction.offerAmount ? String(extraction.offerAmount) : "Agreed fee"}
+                aria-label="Agreed fee"
+                className="w-36 rounded-xl border border-[#14110e]/12 px-3 py-2 text-sm"
+              />
+              <button type="submit" className="rounded-full bg-[#ff5a36] px-3 py-2 text-sm font-semibold text-[#14110e]">Mark closed</button>
+            </form>
+          )}
+        </section>
+
         <details className="rounded-2xl border border-[#14110e]/12 bg-white px-4 py-3" open={rulesOpen} onToggle={(event) => onRulesOpen(event.currentTarget.open)}>
           <summary className="cursor-pointer text-sm font-semibold">Your rate rules</summary>
           <div className="mt-3 grid gap-3">
@@ -1088,12 +1216,21 @@ function Deal({
             <Rule label="Rupees per extra 30 days of usage" value={rules.usageUpliftPer30Days} onChange={(value) => onRule("usageUpliftPer30Days", value)} />
             <Rule label="Rupees per 30 days of exclusivity" value={rules.exclusivityUpliftPer30Days} onChange={(value) => onRule("exclusivityUpliftPer30Days", value)} />
             <Rule label="Minimum fee, rupees" value={rules.minimumOffer} onChange={(value) => onRule("minimumOffer", value)} />
-            {audienceFloor != null ? (
+            <p className="text-xs leading-5 text-[#14110e]/55">
+              {historyFloor != null
+                ? `Floor ${formatINR(historyFloor)} is the median of ${historyCount} closed ${historyCount === 1 ? "fee" : "fees"}.`
+                : "No closed fees yet, so no floor is guessed."}
+              {followers != null ? ` ${new Intl.NumberFormat("en-IN").format(followers)} followers is not a fee.` : ""}
+            </p>
+            {baseline ? (
               <p className="text-xs leading-5 text-[#14110e]/55">
-                Instagram audience {new Intl.NumberFormat("en-IN").format(followers || 0)}. Starting minimum {formatINR(audienceFloor)}.
-                <button className="ml-2 font-semibold text-[#14110e] underline" type="button" onClick={() => onRule("minimumOffer", audienceFloor)}>Use it</button>
+                {baseline.label}: {baseline.currency === "INR" ? formatINR(baseline.amount) : `${baseline.currency} ${baseline.amount.toLocaleString("en-IN")}`}.
+                {baseline.currency === "INR" ? (
+                  <button className="ml-2 font-semibold text-[#14110e] underline" type="button" onClick={() => onRule("minimumOffer", baseline.amount)}>Use it</button>
+                ) : " It is not applied as your rupee floor."}
               </p>
-            ) : <p className="text-xs leading-5 text-[#14110e]/55">0 keeps every priced deal in Brand deals. A missing fee always stays there.</p>}
+            ) : <p className="text-xs leading-5 text-[#14110e]/55">{baselineNote || "Connect Modash or HypeAuditor to show a published price. Nothing is invented when they are absent."}</p>}
+            <p className="text-xs leading-5 text-[#14110e]/55">0 keeps every priced deal in Brand deals. A missing fee always stays there.</p>
           </div>
         </details>
         <p className="text-xs text-[#14110e]/40">{extraction.detectionReason}</p>

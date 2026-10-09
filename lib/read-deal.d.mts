@@ -54,7 +54,7 @@ export const DEFAULT_RULES: RateRules;
 export function extractDeal(conversation: Conversation): Extraction;
 export function buildAdvice(extraction: Extraction, rules: RateRules): Advice;
 export function belowMinimum(extraction: Extraction, minimumOffer: number): boolean;
-export function suggestedMinimum(followers: number | null): number | null;
+export function suggestedMinimum(): null;
 export function recommendedWaitDays(conversation: Conversation): number;
 export function suggestedReply(conversation: Conversation, extraction: Extraction, advice: Advice, rules?: RateRules): string;
 export function formatINR(amount: number): string;

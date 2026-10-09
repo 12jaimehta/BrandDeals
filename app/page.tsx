@@ -5,9 +5,9 @@ import { getViewer } from "@/lib/viewer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Brand Deal Inbox — Turn brand messages into paid deals",
+  title: "Rate desk — Hold the rate on every offer",
   description:
-    "Connect Gmail and Instagram. The desk reads each brand offer, tells you the fair price, and writes the reply",
+    "Creator rate enforcement for managed creators and small agencies. Gmail and Instagram. The floor comes from closed fees, not a guess.",
 };
 
 export default async function Page() {

@@ -85,7 +85,7 @@ const unpriced = suggestedReply(nykaaConversation, nykaa, buildAdvice(nykaa, DEF
 assert.match(unpriced, /₹80,000/);
 assert.match(unpriced, /budget/i);
 assert.strictEqual(belowMinimum(samsung, 80000), false);
-assert.ok(suggestedMinimum(20000000) > suggestedMinimum(20000));
+assert.strictEqual(suggestedMinimum(20000000), null);
 
 const brightline = extractDeal(byId("brightline-winter-drop"));
 assert.strictEqual(brightline.isBrandOpportunity, true);

@@ -8,7 +8,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node tests/read-deals.mjs"
+    "test": "node tests/read-deals.mjs && node tests/benchmarks.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

@@ -5,7 +5,7 @@ import { getViewer } from "@/lib/viewer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "What it does — Brand Deal Inbox",
+  title: "What it does — Rate desk",
   description: "Find the real brand opportunities, pull the terms out, price the usage, and get the reply ready for your approval.",
 };
 

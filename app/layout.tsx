@@ -15,8 +15,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Brand Deal Inbox",
-  description: "Reads brand conversations and manages the next step on the deal.",
+  title: "Rate desk — Creator rate enforcement",
+  description: "Holds the rate on brand offers from Gmail and Instagram. Closed fees set the floor. You approve the reply.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Rate desk for Gmail",
+  "version": "1.0.0",
+  "description": "Send the open brand email to the rate desk. You click it. Nothing is read in the background.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://brand-deal-inbox.vercel.app/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*"
+  ],
+  "action": {
+    "default_title": "Send this email to the rate desk"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

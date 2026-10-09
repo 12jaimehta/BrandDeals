@@ -8,13 +8,14 @@ import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-type InboxId = "gmail" | "instagram" | "whatsapp" | "outlook" | "x" | "messenger";
+type InboxId = "gmail" | "instagram";
 
 const notices: Record<string, string> = {
   error: "Google sign-in did not finish. Please try again.",
   unconfigured: "Sign-in isn't set up yet. Please come back in a bit.",
-  "logged-in": "Signed in. Connect any one inbox to open the desk.",
-  "need-inbox": "Connect one inbox to open the desk. Any of the six is enough.",
+  "logged-in": "Signed in. Connect Gmail or Instagram to open the desk.",
+  "need-inbox": "Connect Gmail or Instagram to open the desk.",
+  paused: "X, WhatsApp, Outlook, and Messenger are paused. Connect Gmail or Instagram.",
   "signed-in": "Gmail is connected. Add another inbox, or continue to the desk.",
   "needs-sql": "Your account needs a quick setup on our side — please try again in a moment.",
   "no-gmail-token": "Google signed you in, but didn't grant inbox access. Connect Gmail again.",
@@ -45,19 +46,16 @@ const notices: Record<string, string> = {
   "messenger-failed": "Messenger didn't finish connecting. In the Meta app, the callback must be the https address you opened, ending in /auth/messenger/callback.",
 };
 
-const setupHints: Record<string, string> = {
+const setupHints: Record<InboxId, string> = {
   gmail: "Sign-in isn't set up yet. Please come back in a bit.",
   instagram: "Instagram isn't set up yet. Please come back in a bit.",
-  whatsapp: "WhatsApp Business isn't available to connect yet.",
-  outlook: "Outlook isn't available to connect yet.",
-  x: "X isn't available to connect yet.",
-  messenger: "Add MESSENGER_APP_ID and MESSENGER_APP_SECRET, then connect Messenger.",
 };
 
 export function ConnectApps({
   email,
   signedIn,
   canOpenDesk,
+  instagramLive,
   connected,
   configured,
   authNotice,
@@ -65,6 +63,7 @@ export function ConnectApps({
   email: string | null;
   signedIn: boolean;
   canOpenDesk: boolean;
+  instagramLive: boolean;
   connected: Record<InboxId, boolean>;
   configured: Record<InboxId, boolean>;
   authNotice: string | null;
@@ -139,46 +138,12 @@ export function ConnectApps({
       id: "instagram",
       mark: "◉",
       name: "Instagram",
-      detail: "DMs on a professional account.",
+      detail: instagramLive
+        ? "DMs on a professional account."
+        : "Sandbox only. Meta app review is not cleared, so only tester accounts connect.",
       live: true,
       href: "/auth/instagram",
       connectLabel: "Connect Instagram",
-    },
-    {
-      id: "whatsapp",
-      mark: "✆",
-      name: "WhatsApp Business",
-      detail: "Your business inbox.",
-      live: false,
-      href: "/auth/whatsapp",
-      connectLabel: "Connect WhatsApp",
-    },
-    {
-      id: "outlook",
-      mark: "▦",
-      name: "Outlook",
-      detail: "Brand mail on Outlook and Hotmail.",
-      live: false,
-      href: "/auth/outlook",
-      connectLabel: "Connect Outlook",
-    },
-    {
-      id: "x",
-      mark: "𝕏",
-      name: "X",
-      detail: "Direct messages.",
-      live: true,
-      href: "/auth/x",
-      connectLabel: "Connect X",
-    },
-    {
-      id: "messenger",
-      mark: "💬",
-      name: "Messenger",
-      detail: "Your Page inbox.",
-      live: true,
-      href: "/auth/messenger",
-      connectLabel: "Connect Messenger",
     },
   ];
 
@@ -202,7 +167,7 @@ export function ConnectApps({
         </motion.p>
         <h1 className="mt-3 overflow-hidden font-serif text-5xl tracking-tight md:text-6xl">
           <motion.span className="block" initial={reduce ? false : { y: "110%" }} animate={{ y: "0%" }} transition={{ duration: 0.8, ease }}>
-            Connect any you use.
+            Gmail and Instagram.
           </motion.span>
         </h1>
         <motion.p
@@ -211,7 +176,7 @@ export function ConnectApps({
           transition={{ delay: 0.2, duration: 0.5, ease }}
           className="mt-4 max-w-xl text-base leading-7 text-[#f6f1e8]/65"
         >
-          All six are a choice. Connect any one of them to open the desk.
+          X, WhatsApp, Outlook, and Messenger are paused so the pipeline stays on these two. Gmail is the path that does not wait on Meta. If Instagram review blocks DMs, paste the email on the email desk.
         </motion.p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -291,11 +256,14 @@ export function ConnectApps({
             );
           })}
         </div>
-        <p className="mt-8 text-center text-sm text-[#f6f1e8]/45">
+        <p className="mt-6 text-center text-xs leading-5 text-[#f6f1e8]/40">
+          Before any creator outside the Meta tester list is added, run <span className="text-[#f6f1e8]/70">sandbox/instagram</span> in Postman. If that review is blocked, use the <Link href="/email" className="underline">email desk</Link>.
+        </p>
+        <p className="mt-4 text-center text-sm text-[#f6f1e8]/45">
           {deskOpen ? (
             <Link href="/deals" className="underline decoration-white/20 underline-offset-4 hover:text-white">Open the desk</Link>
           ) : (
-            "Connect one inbox to open the desk."
+            "Connect Gmail or Instagram to open the desk."
           )}
         </p>
       </main>

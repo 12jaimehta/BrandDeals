@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const errors: Record<string, string> = {
   unconfigured: "Sign-in isn't set up yet. Please come back in a bit.",
   error: "Google sign-in did not finish. Please try again.",
-  "sign-in-first": "Sign in first — then connect any inbox you use.",
+  "sign-in-first": "Sign in first, then connect Gmail or Instagram.",
 };
 
 export default async function LoginPage({
@@ -38,7 +38,7 @@ export default async function LoginPage({
         <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff5a36]">Sign in</p>
         <h1 className="mt-2 font-serif text-4xl tracking-tight">Your desk is one tap away.</h1>
         <p className="mx-auto mt-3 max-w-xs text-sm leading-6 text-[#f6f1e8]/60">
-          Sign-in only creates your account. Every inbox stays optional — connect just the ones you use.
+          Sign-in only creates your account. Then connect Gmail, Instagram, or both.
         </p>
 
         {message ? (
@@ -56,7 +56,7 @@ export default async function LoginPage({
         </a>
 
         <p className="mt-5 text-xs leading-5 text-[#f6f1e8]/40">
-          No inbox connects on its own. After sign-in you land on the inbox list — add one, add all, or skip to the desk.
+          Nothing connects on its own. After sign-in you choose Gmail, Instagram, or the email desk.
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-4 text-sm">

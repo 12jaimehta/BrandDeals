@@ -6,12 +6,14 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 
-type Active = "home" | "inboxes" | "desk" | "what" | "read" | "rates";
+type Active = "home" | "inboxes" | "desk" | "what" | "read" | "rates" | "pricing" | "email";
 
 const links = [
   { href: "/what", label: "What it does" },
   { href: "/read", label: "Live read" },
   { href: "/rates", label: "Rate engine" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/email", label: "Email desk" },
   { href: "/connect", label: "Inboxes" },
   { href: "/deals", label: "Desk" },
 ];
@@ -117,7 +119,7 @@ export function SiteHeader({
         <div className={`mx-auto flex h-16 items-center gap-3 px-4 sm:px-6 ${onDesk ? "max-w-none" : "max-w-6xl"}`}>
           <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={() => setOpen(false)}>
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#14110e]">B</span>
-            <span className="truncate font-serif text-base tracking-tight sm:text-lg">Brand Deal Inbox</span>
+            <span className="truncate font-serif text-base tracking-tight sm:text-lg">Rate desk</span>
           </Link>
           <div className="ml-auto flex items-center gap-2">
             {desk ? (
@@ -158,12 +160,14 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="flex items-center gap-2">
           <span className="grid h-6 w-6 place-items-center rounded-md bg-[#ff5a36] text-xs font-semibold text-[#14110e]">B</span>
-          Brand Deal Inbox
+          Rate desk
         </span>
         <span className="flex flex-wrap gap-x-4 gap-y-2">
           <Link href="/what" className="hover:text-[#f6f1e8]">What it does</Link>
           <Link href="/read" className="hover:text-[#f6f1e8]">Live read</Link>
           <Link href="/rates" className="hover:text-[#f6f1e8]">Rate engine</Link>
+          <Link href="/pricing" className="hover:text-[#f6f1e8]">Pricing</Link>
+          <Link href="/email" className="hover:text-[#f6f1e8]">Email desk</Link>
           <Link href="/connect" className="hover:text-[#f6f1e8]">Inboxes</Link>
           <Link href="/deals" className="hover:text-[#f6f1e8]">Desk</Link>
         </span>

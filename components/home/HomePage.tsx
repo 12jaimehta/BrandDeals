@@ -20,12 +20,8 @@ import {
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const sources = [
-  { name: "Gmail", detail: "Brand email.", state: "Live", live: true },
-  { name: "Instagram", detail: "DMs on a professional account.", state: "Live", live: true },
-  { name: "WhatsApp Business", detail: "Your business inbox.", state: "", live: false },
-  { name: "Outlook", detail: "Brand mail on Outlook and Hotmail.", state: "", live: false },
-  { name: "X", detail: "Direct messages.", state: "Live", live: true },
-  { name: "Messenger", detail: "Your Page inbox.", state: "Live", live: true },
+  { name: "Gmail", detail: "The stable path. Brand email is parsed here, and it does not wait on Meta.", state: "Live", live: true },
+  { name: "Instagram", detail: "DMs for Meta tester accounts. Live creators wait until the Postman sandbox and app review pass.", state: "Sandbox", live: true },
 ];
 
 const beats = [
@@ -43,8 +39,8 @@ const steps = [
   {
     n: "01",
     title: "Connect where deals land",
-    copy: "Sign in with Google to create your account, then connect only the inboxes you use — Gmail, Instagram, WhatsApp Business, Outlook, X and Messenger. Nothing is mandatory. One desk for every inbox, so you stop checking six apps.",
-    points: ["Sign in with Google", "Every inbox optional", "Skip whenever you like"],
+    copy: "Sign in with Google, then connect Gmail, Instagram, or both. X, WhatsApp, Outlook, and Messenger are paused. Gmail still reads the offer if Meta has not approved Instagram messaging.",
+    points: ["Gmail is the stable path", "Instagram stays in sandbox", "X and WhatsApp are paused"],
   },
   {
     n: "02",
@@ -85,11 +81,11 @@ const faqs = [
   },
   {
     q: "How does the minimum-fee filter work?",
-    a: "Set a floor in rupees. Priced deals under it move to Below your rate; unpriced deals always stay visible. Your Instagram audience can suggest a starting floor — 0 keeps everything in Brand deals.",
+    a: "Set a floor in rupees from fees you have already closed, or from a published Modash or HypeAuditor price. Follower count is not turned into a fee. Priced deals under the floor move to Below your rate. A missing fee stays visible.",
   },
   {
     q: "Which inboxes can I connect?",
-    a: "Gmail, Instagram, WhatsApp Business, Outlook, X, and Messenger. Connect any one of them. None of the others are required.",
+    a: "Gmail and Instagram. X, WhatsApp, Outlook, and Messenger are paused. Gmail is enough to open the desk, including when you paste an email or use the Gmail extension.",
   },
 ];
 
@@ -177,15 +173,16 @@ function Kicker({ children }: { children: ReactNode }) {
 function Hero({ reduce }: { reduce: boolean }) {
   return (
     <section className="mx-auto max-w-6xl px-6 pb-14 pt-32 text-center md:pt-40">
-      <h1 className="mx-auto mt-7 max-w-4xl font-serif text-[2.9rem] leading-[0.95] tracking-tight sm:text-7xl md:text-[5.6rem]">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ff5a36]">Creator rate enforcement</p>
+      <h1 className="mx-auto mt-4 max-w-4xl font-serif text-[2.9rem] leading-[0.95] tracking-tight sm:text-7xl md:text-[5.6rem]">
         <span className="block overflow-hidden pb-2">
           <motion.span className="block" initial={reduce ? false : { y: "108%" }} animate={{ y: "0%" }} transition={{ duration: 0.85, ease }}>
-            Turn brand messages
+            Hold the rate
           </motion.span>
         </span>
         <span className="block overflow-hidden pb-2">
           <motion.span className="block" initial={reduce ? false : { y: "108%" }} animate={{ y: "0%" }} transition={{ duration: 0.85, delay: 0.12, ease }}>
-            into <span className="italic text-[#ff5a36]">paid</span> deals.
+            on every <span className="italic text-[#ff5a36]">offer</span>.
           </motion.span>
         </span>
       </h1>
@@ -196,7 +193,7 @@ function Hero({ reduce }: { reduce: boolean }) {
         transition={{ delay: 0.3, duration: 0.6, ease }}
         className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#f6f1e8]/65"
       >
-Your AI agent for brand deals. It reads every offer, benchmarks the price, flags hidden terms, and prepares your best response.
+A rate desk for managed creators and small agencies. It reads the offer, holds the line against your closed fees, and prepares the reply. You approve it.
       </motion.p>
 
       <motion.div
@@ -219,7 +216,7 @@ Your AI agent for brand deals. It reads every offer, benchmarks the price, flags
         transition={{ delay: 0.55, duration: 0.6 }}
         className="mt-5 text-[11px] uppercase tracking-[0.18em] text-[#f6f1e8]/35"
       >
-        Gmail · Instagram · WhatsApp · Outlook · X · Messenger
+        Gmail · Instagram sandbox
       </motion.p>
 
       <motion.dl
@@ -958,7 +955,7 @@ function Inboxes() {
           <div>
             <Kicker>Inboxes</Kicker>
             <h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-6xl">Where the deals land</h2>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Connect any of the six. The desk reads the ones you add.</p>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Two inboxes. Gmail is live. Instagram stays in the sandbox until Meta clears it.</p>
           </div>
           <Link href="/connect" className="rounded-full bg-[#f6f1e8] px-5 py-2.5 text-sm font-semibold text-[#14110e] hover:bg-white">Connect inboxes</Link>
         </div>

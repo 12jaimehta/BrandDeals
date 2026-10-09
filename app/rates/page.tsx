@@ -5,7 +5,7 @@ import { getViewer } from "@/lib/viewer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Rate engine — Brand Deal Inbox",
+  title: "Rate engine — Rate desk",
   description: "Thirty days of usage are included. Every extra 30 days adds to the counter, with the maths shown.",
 };
 

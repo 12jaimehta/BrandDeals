@@ -109,9 +109,26 @@ async function igGet<T>(path: string, token: string, params: Record<string, stri
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   url.searchParams.set("access_token", token);
   const response = await fetch(url);
+  const usageHeader = response.headers.get("x-app-usage");
+  if (usageHeader) {
+    try {
+      const usage = JSON.parse(usageHeader) as { call_count?: number };
+      if ((usage.call_count ?? 0) >= 80) {
+        throw new Error("Instagram is close to its rate limit. Stop syncing and run sandbox/instagram in Postman before calling again.");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("rate limit")) throw error;
+    }
+  }
   const body = (await response.json()) as T & { error?: { message?: string; code?: number } };
   if (!response.ok) {
     const message = body.error?.message || "Instagram did not answer.";
+    if (response.status === 429 || [4, 17, 32, 613].includes(body.error?.code ?? 0)) {
+      throw new Error("Instagram rate limit hit. Measure it in sandbox/instagram before any creator outside the Meta tester list is added.");
+    }
+    if (/not approved|app review|capability/i.test(message)) {
+      throw new Error("Meta has not approved Instagram messaging yet. Use the Gmail desk until app review clears instagram_business_manage_messages.");
+    }
     if (body.error?.code === 190) throw new Error("Instagram access expired. Connect Instagram again.");
     if (/permission|not authorized|professional account/i.test(message)) {
       throw new Error("Instagram refused message access. Use a professional account that is a tester on your Meta app.");

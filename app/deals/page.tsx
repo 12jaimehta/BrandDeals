@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Inbox } from "@/components/Inbox";
 import { instagramConfig, publicConfig } from "@/lib/config";
-import { hasAnyInbox, hasProviderConnection } from "@/lib/any-inbox";
+import { hasAnyInbox } from "@/lib/any-inbox";
 import { loadSavedConversations } from "@/lib/saved-inbox";
 import { hasGmailConnection } from "@/lib/gmail-status";
 import { hasInstagramConnection } from "@/lib/instagram-status";
@@ -19,14 +19,11 @@ export default async function DealsPage({
   if (!viewer || !(await hasAnyInbox(viewer.id))) {
     redirect("/connect?auth=need-inbox");
   }
-  const [saved, gmailConnected, instagramConnected, xConnected, messengerConnected] = await Promise.all([
+  const [saved, gmailConnected, instagramConnected] = await Promise.all([
     loadSavedConversations(),
     hasGmailConnection(viewer.id),
     hasInstagramConnection(viewer.id),
-    hasProviderConnection(viewer.id, "x"),
-    hasProviderConnection(viewer.id, "messenger"),
   ]);
-  const waiting = [xConnected ? "X" : null, messengerConnected ? "Messenger" : null].filter(Boolean) as string[];
 
   return (
     <Inbox
@@ -37,7 +34,7 @@ export default async function DealsPage({
       instagramConfigured={instagramConfig().configured}
       gmailConnected={gmailConnected}
       instagramConnected={instagramConnected}
-      waitingSources={waiting}
+      waitingSources={[]}
     />
   );
 }
