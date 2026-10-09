@@ -1,20 +1,25 @@
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { detectCategories } from "@/lib/agent.mjs";
+import { EMPTY_META, metaFrom, type DealRow, type DeskConversation, type Reader } from "@/lib/deal-rows";
 import type { Conversation, Extraction } from "@/lib/read-deal.mjs";
 
 export type StoredReading = {
   conversation: Conversation;
   extraction: Extraction;
-  reader: "rules" | "openai";
+  reader: Reader;
 };
 
-export async function storeReadings(userId: string, readings: StoredReading[]) {
-  const supabase = await createClient();
-  const stored: Array<Conversation & { extraction: Extraction; reader: "rules" | "openai" }> = [];
+function textOf(conversation: Conversation) {
+  return `${conversation.subject}\n${conversation.messages.map((message) => message.text).join("\n")}`;
+}
+
+export async function storeReadings(client: SupabaseClient, userId: string, readings: StoredReading[]): Promise<DeskConversation[]> {
+  const stored: DeskConversation[] = [];
 
   for (const item of readings) {
     const source = item.conversation.source;
     const externalId = item.conversation.id.replace(new RegExp(`^${source}:`), "");
-    const { data: saved, error } = await supabase
+    const { data: saved, error } = await client
       .from("conversations")
       .upsert(
         {
@@ -33,7 +38,8 @@ export async function storeReadings(userId: string, readings: StoredReading[]) {
       .single();
     if (error || !saved) continue;
 
-    await supabase.from("deals").upsert({
+    const category = item.extraction.isBrandOpportunity ? detectCategories(textOf(item.conversation))[0] ?? null : null;
+    const row = {
       conversation_id: saved.id,
       user_id: userId,
       is_brand_opportunity: item.extraction.isBrandOpportunity,
@@ -51,21 +57,20 @@ export async function storeReadings(userId: string, readings: StoredReading[]) {
       notes: item.extraction.notes,
       reader: item.reader,
       updated_at: new Date().toISOString(),
-    });
+    };
+    let deal = await client.from("deals").upsert({ ...row, category }).select("*").single();
+    if (deal.error) deal = await client.from("deals").upsert(row).select("*").single();
 
     stored.push({
       ...item.conversation,
       id: saved.id,
       extraction: item.extraction,
       reader: item.reader,
+      meta: deal.data ? metaFrom(deal.data as DealRow) : { ...EMPTY_META, category },
     });
   }
 
   return stored.length
     ? stored
-    : readings.map((item) => ({
-        ...item.conversation,
-        extraction: item.extraction,
-        reader: item.reader,
-      }));
+    : readings.map((item) => ({ ...item.conversation, extraction: item.extraction, reader: item.reader, meta: EMPTY_META }));
 }

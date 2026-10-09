@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Rate desk for Gmail",
+  "name": "Counter for Gmail",
   "version": "1.0.0",
-  "description": "Send the open brand email to the rate desk. You click it. Nothing is read in the background.",
+  "description": "Send the open brand email to your Counter desk. You click it. Nothing is read in the background.",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": [
     "https://mail.google.com/*",
@@ -11,7 +11,7 @@
     "http://127.0.0.1:3000/*"
   ],
   "action": {
-    "default_title": "Send this email to the rate desk"
+    "default_title": "Send this email to Counter"
   },
   "background": {
     "service_worker": "background.js"

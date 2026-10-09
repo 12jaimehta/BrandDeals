@@ -5,9 +5,9 @@ import { getViewer } from "@/lib/viewer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Rate desk — Hold the rate on every offer",
+  title: { absolute: "Counter — Your deals, negotiated. Only you say yes." },
   description:
-    "Creator rate enforcement for managed creators and small agencies. Gmail and Instagram. The floor comes from closed fees, not a guess.",
+    "The AI deal desk for creators. Reads Gmail and Instagram, negotiates inside your rules, checks contracts, invoices, and chases payment.",
 };
 
 export default async function Page() {

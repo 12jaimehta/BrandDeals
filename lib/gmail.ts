@@ -189,20 +189,32 @@ function encodeBase64Url(text: string) {
     .replace(/=+$/, "");
 }
 
+function encodeHeader(value: string) {
+  // eslint-disable-next-line no-control-regex
+  return /^[\x00-\x7F]*$/.test(value) ? value : `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+}
+
 export async function sendGmailReply(
   accessToken: string,
-  input: { threadId: string; to: string; subject: string; body: string },
+  input: { threadId?: string; to: string; subject: string; body: string },
 ) {
-  const subject = /^re:/i.test(input.subject.trim())
-    ? input.subject.trim()
-    : `Re: ${input.subject.trim() || "your message"}`;
+  const trimmed = input.subject.trim();
+  const subject = !input.threadId || /^re:/i.test(trimmed) ? trimmed || "Collaboration" : `Re: ${trimmed || "your message"}`;
   const raw = encodeBase64Url(
-    [`To: ${input.to}`, `Subject: ${subject}`, "Content-Type: text/plain; charset=utf-8", "", input.body].join("\r\n"),
+    [
+      `To: ${input.to}`,
+      `Subject: ${encodeHeader(subject)}`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=utf-8",
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      input.body,
+    ].join("\r\n"),
   );
   const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ raw, threadId: input.threadId }),
+    body: JSON.stringify(input.threadId ? { raw, threadId: input.threadId } : { raw }),
   });
   if (response.status === 401) {
     throw new Error("Gmail refused the token. Sign in with Google again.");

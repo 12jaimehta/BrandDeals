@@ -1,4 +1,4 @@
-export type DealSource = "gmail" | "instagram";
+export type DealSource = "gmail" | "instagram" | "link";
 
 export type DealMessage = {
   from: "them" | "you";

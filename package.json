@@ -8,7 +8,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node tests/read-deals.mjs && node tests/benchmarks.mjs"
+    "test": "node tests/read-deals.mjs && node tests/benchmarks.mjs && node tests/agent.mjs && node tests/contract.mjs && node tests/invoice.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

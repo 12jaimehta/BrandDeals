@@ -15,7 +15,6 @@ const notices: Record<string, string> = {
   unconfigured: "Sign-in isn't set up yet. Please come back in a bit.",
   "logged-in": "Signed in. Connect Gmail or Instagram to open the desk.",
   "need-inbox": "Connect Gmail or Instagram to open the desk.",
-  paused: "X, WhatsApp, Outlook, and Messenger are paused. Connect Gmail or Instagram.",
   "signed-in": "Gmail is connected. Add another inbox, or continue to the desk.",
   "needs-sql": "Your account needs a quick setup on our side — please try again in a moment.",
   "no-gmail-token": "Google signed you in, but didn't grant inbox access. Connect Gmail again.",
@@ -29,21 +28,6 @@ const notices: Record<string, string> = {
   "needs-instagram-sql": "Run supabase/migrations/0002_instagram.sql in the Supabase SQL editor, then connect Instagram again.",
   "sign-in-first": "Sign in first — then connect any inbox. Nothing connects on its own.",
   "instagram-localhost": "Instagram needs a secure address. Connect it from your live site address, not localhost.",
-  "outlook-unconfigured": "Outlook needs a Microsoft app registration first. The setup notes below list the two keys.",
-  "x-unconfigured": "X isn't set up yet. Add the X keys, then connect it again.",
-  x: "X is connected.",
-  "x-denied": "X sign-in was cancelled.",
-  "x-mismatch": "X sign-in expired. Connect it again.",
-  "x-failed": "X didn't finish connecting. In the X app, the callback must be http://127.0.0.1:3000/auth/x/callback.",
-  "needs-channels-sql": "Run supabase/migrations/0003_channels.sql in the Supabase SQL editor, then connect again.",
-  "whatsapp-unconfigured": "WhatsApp Business isn't set up yet.",
-  "messenger-https": "Facebook will not sign in over http. Open the https address for this site, then connect Messenger from there.",
-  "messenger-unconfigured": "Messenger isn't set up yet. Add the Messenger keys, then connect it again.",
-  messenger: "Messenger is connected.",
-  "messenger-denied": "Messenger sign-in was cancelled.",
-  "messenger-mismatch": "Messenger sign-in expired. Connect it again.",
-  "messenger-no-page": "That Facebook login has no Page. Messenger connects a Page you admin.",
-  "messenger-failed": "Messenger didn't finish connecting. In the Meta app, the callback must be the https address you opened, ending in /auth/messenger/callback.",
 };
 
 const setupHints: Record<InboxId, string> = {
@@ -176,7 +160,7 @@ export function ConnectApps({
           transition={{ delay: 0.2, duration: 0.5, ease }}
           className="mt-4 max-w-xl text-base leading-7 text-[#f6f1e8]/65"
         >
-          X, WhatsApp, Outlook, and Messenger are paused so the pipeline stays on these two. Gmail is the path that does not wait on Meta. If Instagram review blocks DMs, paste the email on the email desk.
+          Counter reads brand email and Instagram DMs through their official APIs, and replies only from your own accounts. Your deal link works with neither, so set it up in Settings too.
         </motion.p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">

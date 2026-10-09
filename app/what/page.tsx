@@ -5,8 +5,8 @@ import { getViewer } from "@/lib/viewer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "What it does — Rate desk",
-  description: "Find the real brand opportunities, pull the terms out, price the usage, and get the reply ready for your approval.",
+  title: "What it does",
+  description: "Find the real brand opportunities, price the usage, negotiate inside your rules, then contract, invoice, and get paid.",
 };
 
 export default async function Page() {

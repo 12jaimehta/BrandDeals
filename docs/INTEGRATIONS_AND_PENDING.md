@@ -1,97 +1,66 @@
 # Integrations and pending work
 
-Updated: 6 October 2026
+Updated: 8 October 2026
 
-The stack is chosen: Next.js, Supabase, OpenAI, and Google sign-in. Gmail sync and Instagram DM sync are in the app. Everything below is the setup those paths still need, or what is not built.
+Counter runs on Next.js, Supabase, Gmail, Instagram, and OpenAI. Below is the setup each path needs, followed by what is not built yet.
 
-## 1. Create the Supabase project and run the SQL
-
-Pending until you have a project.
+## 1. Supabase
 
 1. Create a project at supabase.com.
-2. Open the SQL editor and run `supabase/migrations/0001_inbox.sql`.
-3. Copy `.env.example` to `.env.local`.
-4. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Project Settings → API.
-5. Set `SUPABASE_SECRET_KEY` to the secret key. The server uses it only to store the Gmail token. The browser cannot read that table.
+2. In the SQL editor, run the migrations in order:
+   - `supabase/migrations/0001_inbox.sql`: rate rules, conversations, deals, Gmail tokens
+   - `supabase/migrations/0002_instagram.sql`: Instagram tokens
+   - `supabase/migrations/0004_deal_desk.sql`: deal-link source, deal status and agreed fee, guardrails and autopilot, creator profiles, the agent action log, invoices. It also drops the unused `channel_connections` table.
+3. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY`.
 
-Restart `npm run dev` after saving `.env.local`.
+The secret key is server-only. It stores inbox tokens, lets the public deal link write a brief into the right creator's desk, and lets the cron run autopilot.
 
-## 2. Google sign-in and Gmail read-only
+## 2. Google sign-in and Gmail
 
-Pending until the Google client exists.
+1. In Google Cloud, create an OAuth client (Web application).
+2. Consent screen scopes: `gmail.readonly` and `gmail.send`. Both are restricted. A public launch needs Google's verification (including a security assessment for restricted scopes). Test users work before that.
+3. Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
+4. Supabase → Authentication → Providers → Google: paste the client id and secret.
+5. Supabase → URL configuration: allow `http://localhost:3000/auth/callback` and your production `/auth/callback`.
+6. Put the same id and secret in `.env.local` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` so expired tokens can be refreshed.
 
-The sign-in route and the callback are already in the app. They request `gmail.readonly` and, on the way back, save the provider token.
+Gmail is used to read brand threads, reply in-thread, reply to deal-link briefs, send invoices, and send payment reminders.
 
-1. In Google Cloud, create an OAuth client of type Web application.
-2. On the consent screen, add the scope `https://www.googleapis.com/auth/gmail.readonly`. Restricted Gmail scopes need Google's verification before a public app can leave testing. A private test user can use it before that.
-3. Authorized redirect URI: `https://<your-project-ref>.supabase.co/auth/v1/callback`
-4. In Supabase → Authentication → Providers → Google, paste that client id and secret, and enable the provider.
-5. In Supabase → Authentication → URL configuration, add `http://localhost:3000/auth/callback` to the redirect allow list, and set the site URL to `http://localhost:3000`.
-6. Put the same client id and secret in `.env.local` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The app needs them when the short-lived Gmail token expires. They must match the client configured in Supabase.
+## 3. Instagram
 
-Then use **Sign in with Google** and **Sync Gmail**. Sync reads up to 12 recent threads, skips chats and drafts, and does not send mail.
+Official Instagram API with Instagram Login. Professional accounts only. No scraping.
 
-If Google does not return a Gmail token, sign in again and accept inbox access. Supabase only exposes `provider_token` on that first exchange, so the callback has to store it immediately.
+1. Create a Meta app, add Instagram, choose API setup with Instagram login.
+2. Redirect URI: `https://<your-domain>/auth/instagram/callback` (Meta requires https).
+3. Set `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`. Set `INSTAGRAM_LIVE=true` once Meta approves `instagram_business_manage_messages`.
+4. Until approval, the creator's account must be a tester on the app.
 
-## 3. OpenAI
+Replies are only sent inside Meta's 24-hour window after the brand's last message. Autopilot checks this before every Instagram send.
 
-Pending until you add a key. Sync still works without it, using the rules reader.
+## 4. OpenAI
 
-Set `OPENAI_API_KEY`. The default model is `gpt-4.1-mini`. Change `OPENAI_MODEL` if you want a different one.
+Optional. Set `OPENAI_API_KEY` (default model `gpt-4.1-mini`, override with `OPENAI_MODEL`).
 
-Sync sends each thread to the model and asks for the same fields the deal card shows. A brand or a fee that is not written in the message is discarded. If a call fails, that thread falls back to the rules reader.
+- Reading: each thread is read into deal terms. A brand or fee not written in the message is discarded. Failures fall back to the rules reader.
+- Rewriting drafts: any rupee amount not already in the draft or thread rejects the rewrite.
+- Contract review: every flag must quote the contract verbatim, or it is dropped. The rules scanner always runs.
 
-Without a key, sync still works and every thread uses the rules reader.
+## 5. Autopilot cron
 
-## 4. Instagram
+Set `CRON_SECRET` in Vercel. `vercel.json` calls `/api/cron/autopilot` daily at 03:30 UTC (09:00 IST). It syncs Gmail and Instagram for every creator with autopilot on, then runs the agent. Autopilot also runs right after a manual sync on the desk.
 
-Built. It uses Instagram Login and the official conversations API. Personal accounts cannot be read. The app does not scrape Instagram.
+Vercel Hobby allows one daily cron. A Pro plan can run it hourly by changing the schedule.
 
-1. In the Supabase SQL editor, run `supabase/migrations/0002_instagram.sql`.
-2. Create a Meta app, add Instagram, and choose API setup with Instagram login.
-3. Set the redirect URI to `http://localhost:3000/auth/instagram/callback`.
-4. Add `INSTAGRAM_APP_ID` and `INSTAGRAM_APP_SECRET` to `.env` and restart the app.
-5. The Instagram account must be professional. While the Meta app is in development, that account also has to be an Instagram tester on the app.
-6. Sign in with Google, then use **Connect Instagram** and **Sync Instagram**.
+## 6. The deal link
 
-Sync reads up to 8 recent DM threads and the latest text messages in each. It does not send a reply. Requests that have been idle for 30 days are not returned by Instagram.
+No setup beyond the migration and the secret key. Creators claim a handle in Settings; the page lives at `/c/<handle>`. The brief API has a honeypot field and a per-IP limit of 6 briefs an hour per server instance.
 
-## 5. Reminders that leave the browser
+## Not built yet
 
-Not built.
-
-The follow-up date is saved in this browser. The `deals` table has `follow_up_on` and `followed_up` columns ready for a later reminder. A later version can email you, or collect a morning list, when the date arrives. It still should not message the brand unless you send the reply yourself.
-
-## 6. Sending the reply
-
-Not built, on purpose for now.
-
-The draft can be copied. Sending through Gmail would be a separate permission (`gmail.send`) and a separate confirmation step.
-
-## 7. Rate rules on the server
-
-The table exists. The inbox still keeps the three numbers in this browser:
-
-- Days of usage you already include
-- Rupees to add for each extra 30 days of usage
-- Rupees to add for each 30 days of exclusivity
-
-Moving those numbers into `rate_rules` is a small follow-up so they survive a new computer. A fuller rate card, per Reel and per Story, can wait.
-
-## Left with existing creator CRMs
-
-These stay out of this project:
-
-- Contracts and e-sign
-- Invoices
-- Collecting payment
-- Media kits and pitch outreach
-
-## Suggested order once the keys exist
-
-1. Run the SQL and sign in with Google on localhost.
-2. Sync Gmail. The Samsung numbers in `npm test` are the check that the reader still does the ₹25,000 usage math.
-3. Add the OpenAI key and sync again.
-4. Connect Instagram for a professional account.
-5. Deliver follow-up reminders outside the browser.
-6. Only then, if you want it, send a reply you have already approved.
+- **Billing.** The 5% (or agency plan) is recorded but not charged. Next: Razorpay subscriptions for agencies and a monthly invoice for the deal share.
+- **Escrow / payment collection.** Payment is chased, not held. Next: Razorpay Route or a payment link on the invoice so brands pay through Counter.
+- **Duplicate threads.** When a reply to a deal-link brief starts a new Gmail thread, a later Gmail sync can list that thread separately.
+- **Shared rate limiting.** The brief limiter is in memory. Move it to Upstash or a Supabase table before heavy traffic.
+- **Agency roster view.** The agency plan is priced; a multi-creator view is not built.
+- **E-sign.** Agreements are copied, downloaded, or printed. Next: Leegality or Digio for Aadhaar e-sign.
+- **WhatsApp, X, Outlook, Messenger.** Removed on purpose. Gmail, Instagram, and the deal link cover where Indian brand deals arrive.

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
+import { PRODUCT } from "@/lib/brand";
 import { getViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +33,13 @@ export default async function LoginPage({
 
       <main className="relative z-10 flex flex-1 items-center justify-center px-6 py-24">
       <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#1c1814] p-8 text-center shadow-[0_60px_140px_-40px_rgba(0,0,0,0.9)] sm:p-10">
-        <Link href="/" className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#ff5a36] text-lg font-semibold text-[#14110e]">
-          B
+        <Link href="/" className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#ff5a36] font-serif text-2xl text-[#14110e]">
+          {PRODUCT.mark}
         </Link>
         <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff5a36]">Sign in</p>
-        <h1 className="mt-2 font-serif text-4xl tracking-tight">Your desk is one tap away.</h1>
+        <h1 className="mt-2 font-serif text-4xl tracking-tight">Your deal desk is one tap away.</h1>
         <p className="mx-auto mt-3 max-w-xs text-sm leading-6 text-[#f6f1e8]/60">
-          Sign-in only creates your account. Then connect Gmail, Instagram, or both.
+          Sign-in only creates your account. Then connect Gmail and Instagram, and claim your deal link.
         </p>
 
         {message ? (

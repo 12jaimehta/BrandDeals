@@ -20,8 +20,9 @@ import {
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const sources = [
-  { name: "Gmail", detail: "The stable path. Brand email is parsed here, and it does not wait on Meta.", state: "Live", live: true },
-  { name: "Instagram", detail: "DMs for Meta tester accounts. Live creators wait until the Postman sandbox and app review pass.", state: "Sandbox", live: true },
+  { name: "Gmail", detail: "Brand email is read on every sync. Replies go out from your own address, in the same thread.", state: "Live", live: true },
+  { name: "Instagram", detail: "Business DMs through Meta's official messaging API. Replies stay inside Meta's 24-hour window.", state: "Official API", live: true },
+  { name: "Deal link", detail: "One link in your bio. Brands send a structured brief with budget, scope and terms. Nothing to chase.", state: "Yours", live: true },
 ];
 
 const beats = [
@@ -39,8 +40,8 @@ const steps = [
   {
     n: "01",
     title: "Connect where deals land",
-    copy: "Sign in with Google, then connect Gmail, Instagram, or both. X, WhatsApp, Outlook, and Messenger are paused. Gmail still reads the offer if Meta has not approved Instagram messaging.",
-    points: ["Gmail is the stable path", "Instagram stays in sandbox", "X and WhatsApp are paused"],
+    copy: "Sign in with Google, connect Gmail and Instagram, and put your deal link in your bio. Brands that use the link arrive with the budget already stated.",
+    points: ["Gmail", "Instagram DMs", "Your own deal link"],
   },
   {
     n: "02",
@@ -56,36 +57,46 @@ const steps = [
   },
   {
     n: "04",
-    title: "Reply and follow-up, ready for approval",
-    copy: "Low offers leave the main list. Unpriced briefs stay visible and the draft names your minimum while asking for the budget. AI can rewrite it, and the follow-up is timed for you. Copy is the only way anything leaves the app.",
-    points: ["Nothing is auto-sent", "Reminders stay on-device", "AI rewrites, you send"],
+    title: "The agent negotiates. You say yes.",
+    copy: "It asks for the budget, chases missing terms, follows up when brands go quiet, and counters inside your guardrails. You choose which of those run on autopilot. Accepting a deal is never one of them.",
+    points: ["Autopilot you switch on, per action", "Never below your minimum", "Only you can accept"],
+  },
+  {
+    n: "05",
+    title: "Contract checked, invoice sent, payment chased",
+    copy: "Paste the brand's contract and every risky clause is flagged with the exact line. Mark the deal won and the GST invoice is one tap. Then the agent reminds the brand before and after the due date until you're paid.",
+    points: ["Perpetual usage, pay-when-paid, penalties", "GST invoice with UPI", "Reminders at −3, 0, +7, +14 days"],
   },
 ];
 
 const faqs = [
   {
     q: "Does it message brands for me?",
-    a: "Only when you press Send, and only the reply you approved. There is no scheduling and no auto-reply — every send is one tap by you, inside the app.",
+    a: "Only the messages you allow. Autopilot is off until you switch it on, and then only for the actions you pick: asking for a budget, asking for missing terms, following up, declining blocked categories, chasing payment, and, if you choose, countering. Any message that accepts a deal is held for you. That rule is in code, not a setting.",
   },
   {
-    q: "What does it actually extract?",
-    a: "Brand, campaign, offer, deliverables, deadline, usage-rights days, exclusivity days, and payment terms — plus what is still missing. A brand name only comes from the message itself, never the email domain. A missing fee stays blank instead of being guessed.",
+    q: "Can it agree to a bad deal?",
+    a: "No. It never accepts, never counters below your minimum, never grants usage or exclusivity past your caps, and never invents a number. AI rewrites that change a fee are thrown away.",
   },
   {
-    q: "How is a brand DM recognised?",
-    a: "Threads are scored for collaboration, campaign and fee language, deliverables, usage and deadlines — and newsletters are hard-excluded. Personal mail and digests never enter the deal list.",
+    q: "What is the deal link?",
+    a: "A page at /c/yourname. Brands fill a two-minute brief: deliverables, budget, usage, exclusivity, deadline, payment terms. It lands on your desk already read, and replies go out from your Gmail.",
   },
   {
-    q: "What if the brand never states a fee?",
-    a: "The deal stays in Brand deals, never hidden. The draft states your minimum and asks for the budget, and names any usage uplift on top — so the conversation keeps moving instead of stalling.",
+    q: "Is the contract check legal advice?",
+    a: "No. It flags clauses creators regret, like perpetual usage, pay-when-paid, penalties and unlimited revisions, quotes the exact line, and tells you what to ask for instead. The agreement it makes is a fixed template, not AI-written legal text. Have a lawyer read anything large.",
   },
   {
-    q: "How does the minimum-fee filter work?",
-    a: "Set a floor in rupees from fees you have already closed, or from a published Modash or HypeAuditor price. Follower count is not turned into a fee. Priced deals under the floor move to Below your rate. A missing fee stays visible.",
+    q: "How does payment chasing work?",
+    a: "Mark a deal won, create the invoice, send it from your Gmail. If payment reminders are on, the agent emails the brand 3 days before the due date, on the day, then 7 and 14 days late, and stops when you mark it paid.",
+  },
+  {
+    q: "What does it cost?",
+    a: "5% of the fee on deals you close through Counter. Nothing on deals you don't. Agencies managing a roster can pay a flat monthly fee instead.",
   },
   {
     q: "Which inboxes can I connect?",
-    a: "Gmail and Instagram. X, WhatsApp, Outlook, and Messenger are paused. Gmail is enough to open the desk, including when you paste an email or use the Gmail extension.",
+    a: "Gmail and Instagram, through their official APIs. Plus your deal link, which needs neither.",
   },
 ];
 
@@ -173,16 +184,16 @@ function Kicker({ children }: { children: ReactNode }) {
 function Hero({ reduce }: { reduce: boolean }) {
   return (
     <section className="mx-auto max-w-6xl px-6 pb-14 pt-32 text-center md:pt-40">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ff5a36]">Creator rate enforcement</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ff5a36]">The AI deal desk for creators</p>
       <h1 className="mx-auto mt-4 max-w-4xl font-serif text-[2.9rem] leading-[0.95] tracking-tight sm:text-7xl md:text-[5.6rem]">
         <span className="block overflow-hidden pb-2">
           <motion.span className="block" initial={reduce ? false : { y: "108%" }} animate={{ y: "0%" }} transition={{ duration: 0.85, ease }}>
-            Hold the rate
+            Your deals, negotiated.
           </motion.span>
         </span>
         <span className="block overflow-hidden pb-2">
           <motion.span className="block" initial={reduce ? false : { y: "108%" }} animate={{ y: "0%" }} transition={{ duration: 0.85, delay: 0.12, ease }}>
-            on every <span className="italic text-[#ff5a36]">offer</span>.
+            Only <span className="italic text-[#ff5a36]">you</span> say yes.
           </motion.span>
         </span>
       </h1>
@@ -193,7 +204,7 @@ function Hero({ reduce }: { reduce: boolean }) {
         transition={{ delay: 0.3, duration: 0.6, ease }}
         className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#f6f1e8]/65"
       >
-A rate desk for managed creators and small agencies. It reads the offer, holds the line against your closed fees, and prepares the reply. You approve it.
+Counter reads every brand email and DM, works out what the deal is really worth, and negotiates inside your rules. Then it checks the contract, sends the invoice, and chases the payment.
       </motion.p>
 
       <motion.div
@@ -203,7 +214,7 @@ A rate desk for managed creators and small agencies. It reads the offer, holds t
         className="mt-9 flex flex-wrap items-center justify-center gap-3"
       >
         <Link href="/connect" className="rounded-full bg-[#ff5a36] px-6 py-3.5 text-sm font-semibold text-[#14110e] shadow-[0_18px_60px_-18px_rgba(255,90,54,0.8)] transition hover:bg-[#ff7a5c]">
-          Connect inboxes
+          Start free
         </Link>
         <Link href="/deals" className="rounded-full border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-medium transition hover:bg-white/10">
           Open the desk
@@ -216,7 +227,7 @@ A rate desk for managed creators and small agencies. It reads the offer, holds t
         transition={{ delay: 0.55, duration: 0.6 }}
         className="mt-5 text-[11px] uppercase tracking-[0.18em] text-[#f6f1e8]/35"
       >
-        Gmail · Instagram sandbox
+        Gmail · Instagram · Your deal link · 5% only when you close
       </motion.p>
 
       <motion.dl
@@ -530,11 +541,11 @@ export function WhatWeDo() {
       <Reveal>
         <Kicker>What this actually does</Kicker>
         <h2 className="mt-4 max-w-3xl font-serif text-4xl tracking-tight sm:text-6xl">
-          Not a CRM. A reader that runs the deal.
+          Not a CRM. An agent that runs the deal.
         </h2>
         <p className="mt-5 max-w-2xl text-base leading-7 text-[#f6f1e8]/60">
-          No contracts, invoices, or pipelines. Four jobs, done on every thread: find the real
-          opportunities, pull the terms out, price the usage, and get the reply and follow-up ready for your approval.
+          From the first DM to the money in your account: find the real opportunities, pull the terms out,
+          price the usage, negotiate inside your rules, then check the contract, invoice, and chase payment.
         </p>
       </Reveal>
       <div className="mt-12 h-px w-full overflow-hidden bg-white/10" aria-hidden="true">
@@ -883,35 +894,35 @@ function FollowUpDemo() {
 function Bento() {
   const cards: { title: string; copy: string; tag: string; big: boolean; demo?: ReactNode }[] = [
     {
-      title: "Below your rate, automatically",
-      copy: "Set a minimum in rupees. Anything priced under it leaves Brand deals for Below your rate. Your 20M-follower floor and a 20k-follower floor are finally different numbers — and your audience suggests the starting point.",
-      tag: "Filtration",
+      title: "Guardrails, not vibes",
+      copy: "Set a minimum, the longest usage and exclusivity you'll grant, and the categories you never take. Offers under your floor get countered or set aside. Betting apps and fairness creams get a polite no.",
+      tag: "Your rules",
       big: true,
       demo: <MinimumDemo />,
     },
     {
       title: "Follow up in 2 days. Or 1.",
-      copy: "The desk sets the wait from the last message — “tomorrow” means 1 day, everything else 2. Reminders live on this device.",
-      tag: "Timing",
+      copy: "The agent sets the wait from the last message. “Tomorrow” means 1 day, everything else 2. It stops after two nudges.",
+      tag: "Autopilot",
       big: false,
       demo: <FollowUpDemo />,
     },
     {
-      title: "Unpriced briefs stay visible",
-      copy: "No fee stated? The deal stays in Brand deals and the draft names your minimum while asking for the budget.",
-      tag: "No silent drops",
-      big: false,
-    },
-    {
-      title: "AI rewrites. You approve.",
-      copy: "One tap gets a fresh AI rewrite of your reply. Copy the approved draft — or press Send yourself.",
-      tag: "Drafts",
-      big: false,
-    },
-    {
-      title: "Private by construction",
-      copy: "Inbox tokens stay locked on our servers — never in your browser. Gmail sends only the reply you approve, Instagram is message-scoped, and message bodies are never logged.",
+      title: "Only you can accept",
+      copy: "A reply that says yes to a deal is never sent automatically. Not by a setting, not by a bug: the send path refuses it.",
       tag: "Trust",
+      big: false,
+    },
+    {
+      title: "Contracts, read for you",
+      copy: "Perpetual usage, pay-when-paid, penalty clauses, unlimited revisions. Flagged with the exact line, and a reply asking for changes.",
+      tag: "Contracts",
+      big: false,
+    },
+    {
+      title: "Paid, not just promised",
+      copy: "GST invoice in a tap, sent from your Gmail, with UPI details. Then polite reminders until the brand pays.",
+      tag: "Money",
       big: false,
     },
   ];
@@ -955,7 +966,7 @@ function Inboxes() {
           <div>
             <Kicker>Inboxes</Kicker>
             <h2 className="mt-4 font-serif text-4xl tracking-tight sm:text-6xl">Where the deals land</h2>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Two inboxes. Gmail is live. Instagram stays in the sandbox until Meta clears it.</p>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-[#f6f1e8]/55">Gmail and Instagram through their official APIs, plus a link you own that doesn't depend on any platform.</p>
           </div>
           <Link href="/connect" className="rounded-full bg-[#f6f1e8] px-5 py-2.5 text-sm font-semibold text-[#14110e] hover:bg-white">Connect inboxes</Link>
         </div>
@@ -1025,10 +1036,10 @@ function Close() {
           <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#ff5a36]/20 blur-[90px]" />
           <Kicker>The desk is ready</Kicker>
           <h2 className="mt-4 max-w-2xl font-serif text-5xl leading-[0.95] tracking-tight sm:text-7xl">
-            Connect an inbox. <span className="italic text-[#ff5a36]">Keep</span> the reply.
+            Stop leaving <span className="italic text-[#ff5a36]">money</span> in your DMs.
           </h2>
           <p className="mt-5 max-w-xl text-base leading-7 text-[#f6f1e8]/60">
-            After one inbox connects you land back on the list — add another, or skip straight to the desk. Your first read takes seconds.
+            Connect Gmail and Instagram, set your rules, and put your deal link in your bio. You pay 5% only on deals you close.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/connect" className="rounded-full bg-[#ff5a36] px-6 py-3.5 text-sm font-semibold text-[#14110e] hover:bg-[#ff7a5c]">Connect inboxes</Link>

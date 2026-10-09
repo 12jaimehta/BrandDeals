@@ -5,18 +5,27 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { PRODUCT } from "@/lib/brand";
 
-type Active = "home" | "inboxes" | "desk" | "what" | "read" | "rates" | "pricing" | "email";
+const appLinks = [
+  { href: "/deals", label: "Desk" },
+  { href: "/money", label: "Money" },
+  { href: "/contracts", label: "Contracts" },
+  { href: "/settings", label: "Settings" },
+];
 
-const links = [
-  { href: "/what", label: "What it does" },
-  { href: "/read", label: "Live read" },
+const siteLinks = [
+  { href: "/what", label: "How it works" },
   { href: "/rates", label: "Rate engine" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/email", label: "Email desk" },
-  { href: "/connect", label: "Inboxes" },
-  { href: "/deals", label: "Desk" },
 ];
+
+export type DeskControls = {
+  autopilot: boolean;
+  onAutopilot: (next: boolean) => void;
+  syncing: boolean;
+  onSync: () => void;
+};
 
 export function SiteHeader({
   email,
@@ -24,19 +33,16 @@ export function SiteHeader({
   desk,
 }: {
   email: string | null;
-  active?: Active;
+  active?: string;
   fixed?: boolean;
-  desk?: {
-    autoSync: boolean;
-    onAutoSync: (next: boolean) => void;
-    syncing: boolean;
-    onSync: () => void;
-  };
+  desk?: DeskControls;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const onDesk = pathname === "/deals";
+  const wide = pathname === "/deals";
+  const links = email ? appLinks : siteLinks;
+  const menuLinks = email ? [...appLinks, { href: "/connect", label: "Inboxes" }, ...siteLinks] : [...siteLinks, { href: "/connect", label: "Inboxes" }];
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -58,13 +64,7 @@ export function SiteHeader({
   const menu = (
     <AnimatePresence>
       {open ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-40 bg-[#14110e]"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="fixed inset-0 z-40 bg-[#14110e]">
           <motion.nav
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -74,20 +74,17 @@ export function SiteHeader({
             aria-label="Pages"
           >
             <ul className="space-y-1">
-              {links.map((link) => {
-                const current = pathname === link.href;
-                return (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className={`block py-1 font-serif text-4xl tracking-tight transition hover:text-[#ff5a36] sm:text-6xl ${current ? "text-[#ff5a36]" : "text-[#f6f1e8]"}`}
-                      onClick={() => setOpen(false)}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                );
-              })}
+              {menuLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className={`block py-1 font-serif text-4xl tracking-tight transition hover:text-[#ff5a36] sm:text-6xl ${pathname === link.href ? "text-[#ff5a36]" : "text-[#f6f1e8]"}`}
+                    onClick={() => setOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
             <div className="mt-10 flex flex-wrap items-center gap-4 border-t border-white/10 pt-6 text-sm">
               {email ? (
@@ -100,12 +97,6 @@ export function SiteHeader({
                   Sign in
                 </Link>
               )}
-              {desk ? (
-                <label className="ml-auto flex items-center gap-2 text-[#f6f1e8]/60">
-                  <input className="h-4 w-4 accent-[#ff5a36]" type="checkbox" checked={desk.autoSync} onChange={(event) => desk.onAutoSync(event.target.checked)} />
-                  Auto sync
-                </label>
-              ) : null}
             </div>
           </motion.nav>
         </motion.div>
@@ -116,17 +107,44 @@ export function SiteHeader({
   return (
     <>
       <header className={`${fixed ? "fixed" : "relative"} inset-x-0 top-0 z-50 border-b border-white/10 bg-[#14110e]/90 backdrop-blur-xl`}>
-        <div className={`mx-auto flex h-16 items-center gap-3 px-4 sm:px-6 ${onDesk ? "max-w-none" : "max-w-6xl"}`}>
-          <Link href="/" className="flex min-w-0 items-center gap-2.5" onClick={() => setOpen(false)}>
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#14110e]">B</span>
-            <span className="truncate font-serif text-base tracking-tight sm:text-lg">Rate desk</span>
+        <div className={`mx-auto flex h-16 items-center gap-3 px-4 sm:px-6 ${wide ? "max-w-none" : "max-w-6xl"}`}>
+          <Link href={email ? "/deals" : "/"} className="flex min-w-0 items-center gap-2.5" onClick={() => setOpen(false)}>
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#ff5a36] text-sm font-semibold text-[#14110e]">{PRODUCT.mark}</span>
+            <span className="truncate font-serif text-base tracking-tight sm:text-lg">{PRODUCT.name}</span>
           </Link>
+          <nav className="ml-4 hidden items-center gap-1 md:flex" aria-label="Main">
+            {links.map((link) => {
+              const on = pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`));
+              return (
+                <Link key={link.href} href={link.href} className={`relative rounded-full px-3 py-1.5 text-sm transition ${on ? "text-[#14110e]" : "text-[#f6f1e8]/60 hover:text-white"}`}>
+                  {on ? <motion.span layoutId="nav-active" className="absolute inset-0 rounded-full bg-[#f6f1e8]" transition={{ type: "spring", stiffness: 420, damping: 36 }} /> : null}
+                  <span className="relative">{link.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
           <div className="ml-auto flex items-center gap-2">
             {desk ? (
-              <button className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3.5 py-2 text-sm font-semibold text-[#14110e] transition hover:bg-[#ff7a5c] disabled:opacity-50" type="button" onClick={desk.onSync} disabled={desk.syncing}>
-                {desk.syncing ? "Reading…" : "Sync"}
-              </button>
-            ) : null}
+              <>
+                <button
+                  type="button"
+                  onClick={() => desk.onAutopilot(!desk.autopilot)}
+                  className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition sm:flex ${desk.autopilot ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : "border-white/15 text-[#f6f1e8]/60 hover:border-white/30"}`}
+                  aria-pressed={desk.autopilot}
+                  title="Autopilot sends only the message types you allow in Settings. It can never accept a deal."
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${desk.autopilot ? "animate-pulse bg-emerald-400" : "bg-white/30"}`} />
+                  Autopilot {desk.autopilot ? "on" : "off"}
+                </button>
+                <button className="whitespace-nowrap rounded-full bg-[#ff5a36] px-3.5 py-2 text-sm font-semibold text-[#14110e] transition hover:bg-[#ff7a5c] disabled:opacity-50" type="button" onClick={desk.onSync} disabled={desk.syncing}>
+                  {desk.syncing ? "Reading…" : "Sync"}
+                </button>
+              </>
+            ) : email ? null : (
+              <Link href="/login" className="hidden rounded-full bg-[#f6f1e8] px-4 py-2 text-sm font-semibold text-[#14110e] transition hover:bg-white sm:block">
+                Sign in
+              </Link>
+            )}
             <button
               type="button"
               className="grid h-11 w-11 place-items-center text-[#f6f1e8] transition hover:text-[#ff5a36]"
@@ -159,15 +177,14 @@ export function SiteFooter() {
     <footer className="relative z-10 border-t border-white/10 px-6 py-10 text-sm text-[#f6f1e8]/45">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="flex items-center gap-2">
-          <span className="grid h-6 w-6 place-items-center rounded-md bg-[#ff5a36] text-xs font-semibold text-[#14110e]">B</span>
-          Rate desk
+          <span className="grid h-6 w-6 place-items-center rounded-md bg-[#ff5a36] text-xs font-semibold text-[#14110e]">{PRODUCT.mark}</span>
+          {PRODUCT.name} · {PRODUCT.tagline}
         </span>
         <span className="flex flex-wrap gap-x-4 gap-y-2">
-          <Link href="/what" className="hover:text-[#f6f1e8]">What it does</Link>
-          <Link href="/read" className="hover:text-[#f6f1e8]">Live read</Link>
+          <Link href="/what" className="hover:text-[#f6f1e8]">How it works</Link>
           <Link href="/rates" className="hover:text-[#f6f1e8]">Rate engine</Link>
           <Link href="/pricing" className="hover:text-[#f6f1e8]">Pricing</Link>
-          <Link href="/email" className="hover:text-[#f6f1e8]">Email desk</Link>
+          <Link href="/contracts" className="hover:text-[#f6f1e8]">Contract check</Link>
           <Link href="/connect" className="hover:text-[#f6f1e8]">Inboxes</Link>
           <Link href="/deals" className="hover:text-[#f6f1e8]">Desk</Link>
         </span>

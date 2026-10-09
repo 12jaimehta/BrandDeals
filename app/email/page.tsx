@@ -5,7 +5,7 @@ import { getViewer } from "@/lib/viewer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Email desk — Creator Rate Enforcement",
+  title: "Paste an email",
   description: "Paste a brand email. The desk extracts the offer and prices it. Nothing is guessed.",
 };
 
