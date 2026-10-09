@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensurePayLink } from "@/lib/billing";
 import { secretKey } from "@/lib/config";
 import { logAction, sendEmail } from "@/lib/channels";
 import { amountInWords } from "@/lib/invoice.mjs";
@@ -24,6 +25,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   const profile = await loadProfile(admin, viewer.id);
   const name = creatorName(profile, viewer.email);
+  let payUrl: string | null = null;
+  try {
+    payUrl = await ensurePayLink(admin, data as InvoiceRow & { user_id: string });
+  } catch (error) {
+    return NextResponse.json({ error: `The online payment link failed: ${error instanceof Error ? error.message : "Razorpay error."} Remove your payout account in Settings to send without it.` }, { status: 502 });
+  }
   const lines = [
     `Hi ${invoice.billToName ? invoice.billToName.split(/\s+/)[0] : "there"},`,
     "",
@@ -35,7 +42,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     invoice.advancePercent ? `Advance due now: ${formatINR(Math.round((invoice.total * invoice.advancePercent) / 100))} (${invoice.advancePercent}%)` : "",
     `Due on: ${invoice.dueOn}`,
     "",
-    "Payment details",
+    payUrl ? `Pay online by UPI, card, or netbanking: ${payUrl}\n` : "",
+    payUrl ? "Or pay directly" : "Payment details",
     profile?.legalName ? `Name: ${profile.legalName}` : "",
     profile?.upiId ? `UPI: ${profile.upiId}` : "",
     profile?.pan ? `PAN: ${profile.pan}` : "",

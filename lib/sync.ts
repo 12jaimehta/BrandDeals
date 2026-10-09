@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { gmailToken, instagramToken } from "@/lib/channels";
-import { isMissingTable } from "@/lib/deal-rows";
+import { asMessages, isMissingTable } from "@/lib/deal-rows";
 import { fetchRecentThreads } from "@/lib/gmail";
 import { fetchInstagramConversations, instagramProfile } from "@/lib/instagram";
 import type { Conversation } from "@/lib/read-deal.mjs";
@@ -41,8 +41,36 @@ export async function syncGmail(client: SupabaseClient, admin: SupabaseClient, u
   }
   if (!probe.data) throw new Error("Gmail is not connected yet. Connect Gmail and allow inbox access.");
   const token = await gmailToken(admin, userId);
-  const conversations = await fetchRecentThreads(token, email);
+  const conversations = await foldBriefReplies(admin, userId, await fetchRecentThreads(token, email));
   return readAndStore(client, userId, conversations);
+}
+
+// A reply to a deal-link brief starts a Gmail thread. Its messages belong to the
+// brief, so they are merged there instead of listed as a second deal.
+async function foldBriefReplies(admin: SupabaseClient, userId: string, conversations: Conversation[]) {
+  const threadIds = conversations.map((item) => item.id.replace(/^gmail:/, ""));
+  if (!threadIds.length) return conversations;
+  const { data, error } = await admin
+    .from("conversations")
+    .select("id, messages, gmail_thread_id")
+    .eq("user_id", userId)
+    .eq("source", "link")
+    .in("gmail_thread_id", threadIds);
+  if (error || !data?.length) return conversations;
+
+  const briefs = new Map((data as { id: string; messages: unknown; gmail_thread_id: string }[]).map((row) => [row.gmail_thread_id, row]));
+  const rest: Conversation[] = [];
+  for (const conversation of conversations) {
+    const brief = briefs.get(conversation.id.replace(/^gmail:/, ""));
+    if (!brief) {
+      rest.push(conversation);
+      continue;
+    }
+    const original = asMessages(brief.messages)[0];
+    const messages = original ? [original, ...conversation.messages.filter((message) => message.at > original.at)] : conversation.messages;
+    await admin.from("conversations").update({ messages, received_at: conversation.receivedAt }).eq("id", brief.id);
+  }
+  return rest;
 }
 
 export async function syncInstagram(client: SupabaseClient, admin: SupabaseClient, userId: string) {

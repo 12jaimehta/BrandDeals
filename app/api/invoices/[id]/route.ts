@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { dropPayLink, settleManualPayment } from "@/lib/billing";
+import { secretKey } from "@/lib/config";
 import { invoiceFrom, type InvoiceRow } from "@/lib/invoices";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/viewer";
 
@@ -16,6 +19,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { data: current } = await supabase.from("invoices").select("*").eq("id", id).eq("user_id", viewer.id).maybeSingle();
   if (!current) return NextResponse.json({ error: "Couldn't find that invoice." }, { status: 404 });
   const total = (current as InvoiceRow).total;
+  const paidOnline = (current as InvoiceRow).paid_via === "razorpay" && (current as InvoiceRow).status === "paid";
+  if (paidOnline && (body.paidAmount !== undefined || body.status !== undefined)) {
+    return NextResponse.json({ error: "This invoice was paid online through Razorpay. Its payment can't be edited here." }, { status: 400 });
+  }
 
   const update: Record<string, unknown> = {};
   if (typeof body.paidAmount === "number" && Number.isFinite(body.paidAmount) && body.paidAmount >= 0) {
@@ -40,5 +47,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { data, error } = await supabase.from("invoices").update(update).eq("id", id).eq("user_id", viewer.id).select("*").single();
   if (error || !data) return NextResponse.json({ error: "That change was not saved." }, { status: 400 });
-  return NextResponse.json({ invoice: invoiceFrom(data as InvoiceRow) });
+
+  const row = { ...(data as InvoiceRow), user_id: viewer.id };
+  const paymentChanged = "paid_amount" in update || update.status === "void";
+  if (!paymentChanged || !secretKey()) return NextResponse.json({ invoice: invoiceFrom(row) });
+  const admin = createAdminClient();
+  if (row.status === "paid") await settleManualPayment(admin, row);
+  else await dropPayLink(admin, row);
+  const { data: fresh } = await admin.from("invoices").select("*").eq("id", id).single();
+  return NextResponse.json({ invoice: invoiceFrom((fresh ?? row) as InvoiceRow) });
 }

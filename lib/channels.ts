@@ -51,7 +51,7 @@ export async function instagramToken(admin: SupabaseClient, userId: string) {
 
 export async function sendEmail(admin: SupabaseClient, userId: string, input: { to: string; subject: string; body: string; threadId?: string }) {
   const token = await gmailToken(admin, userId);
-  await sendGmailReply(token, input);
+  return sendGmailReply(token, input);
 }
 
 export async function loadThread(admin: SupabaseClient, conversationId: string): Promise<ThreadRow | null> {
@@ -75,7 +75,12 @@ export async function sendOnThread(admin: SupabaseClient, thread: ThreadRow, tex
     const to = thread.contact_email || thread.from_handle || "";
     if (!to.includes("@")) throw new Error("This brief has no email to reply to.");
     const subject = thread.subject ? `Re: ${thread.subject}` : "Re: your collaboration brief";
-    await sendEmail(admin, thread.user_id, { to, subject, body: text });
+    const { data: saved } = await admin.from("conversations").select("gmail_thread_id").eq("id", thread.id).maybeSingle();
+    const threadId = (saved?.gmail_thread_id as string | null) || undefined;
+    const sent = await sendEmail(admin, thread.user_id, { to, subject, body: text, threadId });
+    if (!threadId && sent.threadId) {
+      await admin.from("conversations").update({ gmail_thread_id: sent.threadId }).eq("id", thread.id);
+    }
     return "gmail" as const;
   }
   if (thread.source === "instagram") {

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CountTo, Kicker, Toast, api, buttonCream, buttonGhostDark, buttonHot, ease, inputDark, useToast } from "@/components/ui";
-import { closeCut } from "@/lib/commercial.mjs";
+import type { Billing, FeeSummary } from "@/lib/billing";
 import type { DeskConversation } from "@/lib/deal-rows";
 import { balanceOf, displayStatus, type Invoice } from "@/lib/invoice.mjs";
 import { formatDate, formatINR } from "@/lib/read-deal.mjs";
@@ -20,7 +20,25 @@ const tone: Record<string, string> = {
   void: "bg-white/5 text-[#f6f1e8]/35 line-through",
 };
 
-export function MoneyBoard({ conversations, initialInvoices, gmailConnected }: { conversations: DeskConversation[]; initialInvoices: Invoice[]; gmailConnected: boolean }) {
+type Payments = { configured: boolean; agencyAvailable: boolean; payoutLinked: boolean };
+
+const feeLabel: Record<string, string> = {
+  deducted: "Fee taken from the online payment",
+  due: "Counter fee due",
+  billed: "Counter fee billed",
+  paid: "Counter fee paid",
+  transfer_failed: "Payout failed",
+};
+
+export function MoneyBoard({ conversations, initialInvoices, gmailConnected, billing, fees, payments, notice }: {
+  conversations: DeskConversation[];
+  initialInvoices: Invoice[];
+  gmailConnected: boolean;
+  billing: Billing;
+  fees: FeeSummary;
+  payments: Payments;
+  notice: string | null;
+}) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [view, setView] = useState<View>("open");
   const [busy, setBusy] = useState<string | null>(null);
@@ -28,6 +46,33 @@ export function MoneyBoard({ conversations, initialInvoices, gmailConnected }: {
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState({ brand: "", billToName: "", billToEmail: "", label: "", amount: "", gst: false, dueInDays: "15" });
   const [toast, showToast] = useToast();
+  const agency = billing.plan === "agency";
+
+  async function go(url: string, key: string) {
+    setBusy(key);
+    try {
+      const body = await api<{ url?: string; until?: string | null }>(url, { method: "POST" });
+      if (body.url) window.location.href = body.url;
+      else showToast(body.until ? `Cancelled. The agency plan runs until ${formatDate(body.until)}.` : "Done.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "That didn't work.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function retryPayout(invoice: Invoice) {
+    setBusy(invoice.id);
+    try {
+      const result = await api<{ invoice: Invoice }>(`/api/invoices/${invoice.id}/payout`, { method: "POST" });
+      replace(result.invoice);
+      showToast("Payout sent to your account.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "The payout failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const stats = useMemo(() => {
     const deals = conversations.filter((item) => item.extraction.isBrandOpportunity);
@@ -43,7 +88,7 @@ export function MoneyBoard({ conversations, initialInvoices, gmailConnected }: {
     const outstanding = live.filter((invoice) => invoice.status !== "draft").reduce((sum, invoice) => sum + balanceOf(invoice), 0);
     const collected = live.reduce((sum, invoice) => sum + invoice.paidAmount, 0);
     const overdue = live.filter((invoice) => displayStatus(invoice) === "overdue");
-    return { open: open.length, won: won.length, pipeline, wonTotal, uplift, outstanding, collected, overdue, fee: closeCut("deal-share", wonTotal).cut };
+    return { open: open.length, won: won.length, pipeline, wonTotal, uplift, outstanding, collected, overdue };
   }, [conversations, invoices]);
 
   const shown = invoices.filter((invoice) => {
@@ -131,7 +176,56 @@ export function MoneyBoard({ conversations, initialInvoices, gmailConnected }: {
           </motion.div>
         ))}
       </div>
-      <p className="mt-4 text-sm text-[#f6f1e8]/45">{stats.open} open deal{stats.open === 1 ? "" : "s"} worth {formatINR(stats.pipeline)} in first offers. Counter's 5% on closed deals: {formatINR(stats.fee)}.</p>
+      <p className="mt-4 text-sm text-[#f6f1e8]/45">{stats.open} open deal{stats.open === 1 ? "" : "s"} worth {formatINR(stats.pipeline)} in first offers.</p>
+      {notice === "subscribed" ? <p className="mt-2 text-sm text-emerald-300">Thanks. The agency plan switches on as soon as Razorpay confirms the payment.</p> : null}
+
+      <section className="mt-8 grid gap-3 lg:grid-cols-[1.3fr_1fr]">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.14em] text-[#f6f1e8]/45">Your plan</p>
+              <p className="mt-1 font-serif text-2xl tracking-tight">{agency ? "Agency · flat monthly" : "5% of closed deals"}</p>
+              <p className="mt-1 text-sm text-[#f6f1e8]/50">
+                {agency
+                  ? `No fee on any deal.${billing.currentEnd ? ` Renews ${formatDate(billing.currentEnd)}.` : ""}`
+                  : "Charged only on invoices for deals on your desk. Taken automatically when the brand pays online."}
+              </p>
+            </div>
+            {agency ? (
+              <button type="button" className={buttonGhostDark} disabled={busy === "cancel"} onClick={() => void go("/api/billing/cancel", "cancel")}>Cancel at period end</button>
+            ) : payments.agencyAvailable ? (
+              <button type="button" className={buttonGhostDark} disabled={busy === "subscribe"} onClick={() => void go("/api/billing/subscribe", "subscribe")}>Switch to agency plan</button>
+            ) : null}
+          </div>
+          {!agency ? (
+            <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
+              <div className="rounded-2xl bg-white/[0.04] p-3"><dt className="text-xs text-[#f6f1e8]/45">Due</dt><dd className="mt-1 font-semibold">{formatINR(fees.due)}</dd></div>
+              <div className="rounded-2xl bg-white/[0.04] p-3"><dt className="text-xs text-[#f6f1e8]/45">Taken from payments</dt><dd className="mt-1 font-semibold">{formatINR(fees.deducted)}</dd></div>
+              <div className="rounded-2xl bg-white/[0.04] p-3"><dt className="text-xs text-[#f6f1e8]/45">Paid</dt><dd className="mt-1 font-semibold">{formatINR(fees.paid)}</dd></div>
+            </dl>
+          ) : null}
+          {fees.due > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#ff5a36]/10 p-3">
+              <p className="text-sm text-[#f6f1e8]/75">{fees.dueInvoices.length} invoice{fees.dueInvoices.length === 1 ? " was" : "s were"} paid outside Counter: {fees.dueInvoices.map((item) => item.number).join(", ")}.</p>
+              {payments.configured ? (
+                <button type="button" className={buttonHot} disabled={busy === "fees"} onClick={() => void go("/api/billing/fees", "fees")}>{fees.openCharge ? "Open payment link" : `Pay ${formatINR(fees.due)}`}</button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <p className="text-xs uppercase tracking-[0.14em] text-[#f6f1e8]/45">Online payments</p>
+          <p className="mt-1 font-serif text-2xl tracking-tight">{payments.configured && payments.payoutLinked ? "On" : "Off"}</p>
+          <p className="mt-1 text-sm text-[#f6f1e8]/50">
+            {!payments.configured
+              ? "Razorpay isn't set up on this server yet. Invoices carry your UPI ID instead."
+              : payments.payoutLinked
+                ? "Every invoice email and reminder carries a Razorpay link. When the brand pays, your share settles to your bank automatically."
+                : "Add your Razorpay payout account in Settings so brands can pay invoices online."}
+          </p>
+          {payments.configured && !payments.payoutLinked ? <Link href="/settings#invoice" className={`${buttonCream} mt-3 inline-block`}>Add payout account</Link> : null}
+        </div>
+      </section>
 
       <AnimatePresence initial={false}>
         {creating ? (
@@ -172,6 +266,8 @@ export function MoneyBoard({ conversations, initialInvoices, gmailConnected }: {
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={`/invoice/${invoice.id}`} className="font-semibold hover:underline">{invoice.number}</Link>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${tone[status]}`}>{status.replace("_", " ")}</span>
+                    {invoice.paidVia === "razorpay" ? <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#f6f1e8]/60">Paid online</span> : null}
+                    {feeLabel[invoice.feeStatus] && (invoice.feeAmount > 0 || invoice.feeStatus === "transfer_failed") ? <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${invoice.feeStatus === "transfer_failed" ? "bg-[#ff5a36] text-[#14110e]" : "bg-white/5 text-[#f6f1e8]/50"}`}>{feeLabel[invoice.feeStatus]}{invoice.feeStatus === "transfer_failed" ? "" : ` · ${formatINR(invoice.feeAmount)}`}</span> : null}
                   </div>
                   <p className="mt-0.5 truncate text-sm text-[#f6f1e8]/55">{invoice.brand || invoice.billToName}{invoice.billToEmail ? ` · ${invoice.billToEmail}` : ""}</p>
                 </div>
@@ -187,6 +283,7 @@ export function MoneyBoard({ conversations, initialInvoices, gmailConnected }: {
                       <button type="button" className={buttonGhostDark} disabled={busy === invoice.id || !invoice.billToEmail || !gmailConnected} onClick={() => void send(invoice)}>{invoice.status === "draft" ? "Send" : "Resend"}</button>
                     </>
                   ) : null}
+                  {invoice.feeStatus === "transfer_failed" ? <button type="button" className={buttonHot} disabled={busy === invoice.id} onClick={() => void retryPayout(invoice)}>Retry payout</button> : null}
                   <Link href={`/invoice/${invoice.id}`} className={buttonGhostDark}>Open</Link>
                 </div>
                 {partial?.id === invoice.id ? (

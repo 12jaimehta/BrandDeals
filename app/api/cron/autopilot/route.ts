@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   if (!secretKey()) return NextResponse.json({ error: "SUPABASE_SECRET_KEY is missing." }, { status: 500 });
 
   const admin = createAdminClient();
+  await admin.from("brief_hits").delete().lt("created_at", new Date(Date.now() - 86400000).toISOString());
   const { data: users, error } = await admin.from("rate_rules").select("user_id").eq("autopilot->>enabled", "true").limit(500);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

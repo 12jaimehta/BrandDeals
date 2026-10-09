@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { secretKey } from "@/lib/config";
 import { briefExtraction, briefText, cleanBrief } from "@/lib/brief";
 import { loadProfileByHandle } from "@/lib/profile";
@@ -6,16 +8,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
-const recent = new Map<string, number[]>();
 const WINDOW_MS = 60 * 60 * 1000;
-const LIMIT = 6;
+const PER_NETWORK = 6;
+const PER_CREATOR = 40;
 
-function allowed(key: string) {
-  const now = Date.now();
-  const hits = (recent.get(key) ?? []).filter((at) => now - at < WINDOW_MS);
-  if (hits.length >= LIMIT) return false;
-  hits.push(now);
-  recent.set(key, hits);
+const hashed = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 32);
+
+// Counted in Supabase so the limit holds across every server instance.
+async function allowed(admin: SupabaseClient, key: string, limit: number) {
+  const since = new Date(Date.now() - WINDOW_MS).toISOString();
+  const { count, error } = await admin.from("brief_hits").select("id", { count: "exact", head: true }).eq("key", key).gte("created_at", since);
+  if (error) return true;
+  if ((count ?? 0) >= limit) return false;
+  await admin.from("brief_hits").insert({ key });
   return true;
 }
 
@@ -26,11 +31,15 @@ export async function POST(request: Request) {
   if (typeof body.website === "string" && body.website) return NextResponse.json({ ok: true });
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  if (!allowed(ip)) return NextResponse.json({ error: "Too many briefs from this network. Try again in an hour." }, { status: 429 });
-
   const admin = createAdminClient();
+  if (!(await allowed(admin, `ip:${hashed(ip)}`, PER_NETWORK))) {
+    return NextResponse.json({ error: "Too many briefs from this network. Try again in an hour." }, { status: 429 });
+  }
   const profile = await loadProfileByHandle(admin, String(body.handle ?? ""));
   if (!profile) return NextResponse.json({ error: "That deal link doesn't exist." }, { status: 404 });
+  if (!(await allowed(admin, `creator:${profile.userId}`, PER_CREATOR))) {
+    return NextResponse.json({ error: "This creator has received a lot of briefs in the last hour. Try again later." }, { status: 429 });
+  }
   if (!profile.accepting) return NextResponse.json({ error: `${profile.displayName || "This creator"} isn't taking new briefs right now.` }, { status: 403 });
 
   const { brief, error } = cleanBrief(body);

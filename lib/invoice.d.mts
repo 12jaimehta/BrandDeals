@@ -23,7 +23,13 @@ export type Invoice = {
   lastReminderAt: string | null;
   notes: string;
   createdAt: string;
+  paymentLinkUrl: string | null;
+  paidVia: "razorpay" | "manual" | null;
+  feeAmount: number;
+  feeStatus: FeeStatus;
 };
+
+export type FeeStatus = "none" | "deducted" | "due" | "billed" | "paid" | "waived" | "transfer_failed";
 
 export type ReminderStage = "before_due" | "due_today" | "overdue_7" | "overdue_14";
 
@@ -50,4 +56,5 @@ export function reminderMessage(
   invoice: Pick<Invoice, "number" | "brand" | "billToName" | "dueOn" | "total" | "paidAmount">,
   stage: ReminderStage,
   creatorName?: string,
+  payUrl?: string | null,
 ): { subject: string; text: string };

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canAutoSend, lastFromThem, planDeal } from "@/lib/agent.mjs";
+import { ensurePayLink } from "@/lib/billing";
 import { appendSent, logAction, sendEmail, sendOnThread, type ThreadRow } from "@/lib/channels";
 import { CONVERSATION_COLUMNS, deskConversationFrom, type ConversationRow } from "@/lib/deal-rows";
 import { planReminder, reminderMessage } from "@/lib/invoice.mjs";
@@ -104,7 +105,8 @@ export async function runAutopilot(admin: SupabaseClient, userId: string, email:
       const invoice = invoiceFrom(row);
       const due = planReminder(invoice, now);
       if (!due) continue;
-      const message = reminderMessage(invoice, due.stage, name);
+      const payUrl = await ensurePayLink(admin, row as InvoiceRow & { user_id: string }).catch(() => invoice.paymentLinkUrl);
+      const message = reminderMessage(invoice, due.stage, name, payUrl);
       try {
         await sendEmail(admin, userId, { to: invoice.billToEmail, subject: message.subject, body: message.text });
         await admin

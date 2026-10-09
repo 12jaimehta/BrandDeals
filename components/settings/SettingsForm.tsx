@@ -220,6 +220,11 @@ export function SettingsForm({ initialSettings, initialProfile, origin }: { init
             <input className={inputDark} value={profile.gstin} onChange={(event) => setField("gstin", event.target.value.toUpperCase())} />
           </Field>
           <div className="sm:col-span-2">
+            <Field label="Razorpay payout account" hint="Brands pay invoices online through Counter; your share, minus Razorpay's fee and Counter's 5%, settles here automatically. We send you this ID (acc_…) after a short KYC. Leave blank to use UPI only.">
+              <input className={inputDark} value={profile.razorpayAccountId} onChange={(event) => setField("razorpayAccountId", event.target.value.trim())} placeholder="acc_XXXXXXXXXXXXXX" />
+            </Field>
+          </div>
+          <div className="sm:col-span-2">
             <Field label="Billing address">
               <textarea className={`${inputDark} min-h-20`} value={profile.address} onChange={(event) => setField("address", event.target.value)} />
             </Field>

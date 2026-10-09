@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { addDaysIso, computeInvoice, invoiceNumber, istToday, type Invoice, type InvoiceItem, type InvoiceStatus } from "@/lib/invoice.mjs";
+import { addDaysIso, computeInvoice, invoiceNumber, istToday, type FeeStatus, type Invoice, type InvoiceItem, type InvoiceStatus } from "@/lib/invoice.mjs";
 
 export type { Invoice };
 
@@ -24,6 +24,17 @@ export type InvoiceRow = {
   last_reminder_at: string | null;
   notes: string | null;
   created_at: string;
+  payment_link_id?: string | null;
+  payment_link_url?: string | null;
+  payment_link_amount?: number | null;
+  paid_via?: "razorpay" | "manual" | null;
+  razorpay_payment_id?: string | null;
+  transfer_id?: string | null;
+  transfer_paise?: number | null;
+  fee_amount?: number | null;
+  fee_status?: FeeStatus | null;
+  fee_charge_id?: string | null;
+  user_id?: string;
 };
 
 function asItems(value: unknown): InvoiceItem[] {
@@ -57,6 +68,10 @@ export function invoiceFrom(row: InvoiceRow): Invoice {
     lastReminderAt: row.last_reminder_at,
     notes: row.notes ?? "",
     createdAt: row.created_at,
+    paymentLinkUrl: row.payment_link_url ?? null,
+    paidVia: row.paid_via ?? null,
+    feeAmount: row.fee_amount ?? 0,
+    feeStatus: row.fee_status ?? "none",
   };
 }
 

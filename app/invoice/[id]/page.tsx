@@ -93,6 +93,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         <section className="mt-12 rounded-2xl bg-[#14110e]/[0.04] p-5 text-sm">
           <p className="text-xs uppercase tracking-[0.14em] text-[#14110e]/45">Pay to</p>
           <p className="mt-1 font-semibold">{name}</p>
+          {invoice.paymentLinkUrl && invoice.status !== "paid" && invoice.status !== "void" ? (
+            <p className="mb-2">
+              <a href={invoice.paymentLinkUrl} className="inline-block rounded-full bg-[#14110e] px-4 py-2 text-sm font-semibold text-[#f6f1e8]">Pay {formatINR(balanceOf(invoice))} online</a>
+              <span className="ml-2 text-xs text-[#14110e]/50 print:inline">{invoice.paymentLinkUrl}</span>
+            </p>
+          ) : null}
           {profile?.upiId ? <p>UPI: {profile.upiId}{upiLink ? <a href={upiLink} className="ml-2 underline print:hidden">Pay by UPI</a> : null}</p> : <p className="text-[#14110e]/50 print:hidden">Add your UPI ID in <Link href="/settings#invoice" className="underline">Settings</Link>.</p>}
           {invoice.notes ? <p className="mt-3 whitespace-pre-line text-[#14110e]/65">{invoice.notes}</p> : null}
         </section>

@@ -25,6 +25,7 @@ Counter is an AI deal desk for creators. It covers the whole deal: find the offe
 5. **Contract.** The rules scanner (`lib/contract.mjs`) flags 16 clause types with the exact sentence and what to ask instead. An optional AI review must quote the contract verbatim. The agreement builder is a fixed 12-section template.
 6. **Close.** Mark won with the agreed fee. The uplift over the first offer and the 5% share are recorded.
 7. **Invoice and chase.** GST invoices (`lib/invoice.mjs`) with sequence numbers, amount in words, advance, UPI link, and print/PDF. Sent from the creator's Gmail. Reminders at 3 days before, on the due date, then 7 and 14 days late.
+8. **Get paid.** Each invoice email and reminder carries a Razorpay payment link. The webhook (`app/api/razorpay/webhook`) marks it paid and transfers the creator's share through Route, minus Razorpay's fee and Counter's 5% (`lib/commercial.mjs`). Invoices marked paid by hand make the fee due, payable from Money in one link. The agency plan is a Razorpay subscription.
 
 ## Pages
 
@@ -56,5 +57,6 @@ The Samsung brief stays the reference: ₹80,000 offer, 90-day usage, ₹25,000 
 - `lib/invoice.mjs`: GST maths, amount in words, reminder schedule
 - `lib/read-deal.mjs`, `lib/read-with-model.ts`: reading
 - `lib/autopilot.ts`, `lib/sync.ts`, `lib/channels.ts`: server-side agent run, sync, and sending
+- `lib/razorpay.ts`, `lib/billing.ts`: Razorpay API, payment links, fees, plans
 - `components/desk/`: the desk and deal panel
 - `supabase/migrations/`: schema and row-level security

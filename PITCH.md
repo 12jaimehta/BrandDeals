@@ -55,7 +55,8 @@ An agent that runs the deal end to end, with the creator in control.
 
 - **Creators:** 5% of the agreed fee on deals closed through Counter. Nothing on deals they decline. A creator closing ₹50,000 a month pays ₹2,500 and typically gains far more from priced usage alone.
 - **Agencies and talent managers:** ₹24,000 a month for a roster, with no percentage on top. Counter becomes their back office.
-- **Later:** payment collection (brands pay through Counter's invoice link), fast payouts against approved invoices, and brand-side tools.
+- **Collected at source:** when brands pay through Counter's Razorpay link, our fee is deducted before the creator's payout, so there's no fee to chase.
+- **Later:** escrow, fast payouts against approved invoices, and brand-side tools.
 
 ## Market
 
@@ -83,7 +84,7 @@ An agent that runs the deal end to end, with the creator in control.
 | Platform API changes | Gmail plus Instagram plus a deal link we own. No single platform dependency. Official APIs only. |
 | Creators won't trust an agent | Autonomy ladder: drafts first, autopilot one action at a time, acceptance never automatic, every action logged. |
 | Legal liability on contracts | Fixed-template agreements, a rules-based scanner, AI flags that must quote the source, and a clear "not legal advice" line. |
-| Brands don't pay | Reminders now; payment links and escrow next, so money flows through Counter. |
+| Brands don't pay | Every invoice and reminder carries a Razorpay link; money flows through Counter and settles to the creator automatically. Escrow before work starts is next. |
 | Price sensitivity in India | Zero upfront cost. We charge only on money the creator actually received in a closed deal. |
 
 ## Where we are
@@ -96,13 +97,14 @@ Built and working end to end:
 - Two-step approve-and-send from the creator's own Gmail or Instagram
 - Contract scanner, guarded AI contract review, and agreement builder
 - Deal close, GST invoices, printable invoice with UPI, invoice email, and automated payment reminders
+- Razorpay: brands pay invoices online, the creator's share settles automatically through Route, and Counter's 5% is deducted at source. Agency plan billed as a Razorpay subscription
 - Money dashboard: won, negotiated uplift, outstanding, collected
 
 ## Next 90 days
 
 1. **50 creators** from 10k to 500k followers, onboarded by hand. Measure: deals closed, fee uplift over first offer, days to payment.
 2. **5 talent agencies** on the roster plan.
-3. **Payment links on invoices** (Razorpay), then collection through Counter.
+3. **Escrow:** brand pays the advance into Counter before work starts, released on delivery.
 4. **Rate benchmarks** from closed deals, shown on every counter.
 5. Meta app review for Instagram messaging at scale, and Google verification for Gmail.
 

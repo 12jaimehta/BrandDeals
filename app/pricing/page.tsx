@@ -24,7 +24,7 @@ export default async function PricingPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ff5a36]">Pricing</p>
         <h1 className="mt-3 max-w-3xl font-serif text-5xl tracking-tight md:text-6xl">You pay when you get paid.</h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-[#f6f1e8]/65">
-          No subscription to justify in a slow month. Counter earns when a deal closes, so it is on your side of the table: it wants the higher fee, the faster payment, and the cleaner contract as much as you do. Card billing is not switched on yet, so the desk records the cut without charging you.
+          No subscription to justify in a slow month. Counter earns when a deal closes, so it is on your side of the table: it wants the higher fee, the faster payment, and the cleaner contract as much as you do. When a brand pays your invoice online, the fee is taken from that payment automatically. Deals paid outside Counter add up to one payment link you settle by UPI or card.
         </p>
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           <article className="rounded-3xl border border-white/10 bg-white/[0.03] p-7">

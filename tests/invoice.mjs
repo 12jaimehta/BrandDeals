@@ -56,5 +56,9 @@ const overdue = reminderMessage({ ...base, paidAmount: 52500 }, "overdue_7", "Ri
 assert.ok(overdue.subject.includes("overdue"));
 assert.ok(overdue.text.includes("₹52,500"));
 assert.ok(overdue.text.startsWith("Hi Ananya,"));
+assert.ok(!overdue.text.includes("pay online"));
+const withLink = reminderMessage(base, "due_today", "Riya", "https://rzp.io/i/abc");
+assert.ok(withLink.text.includes("https://rzp.io/i/abc"));
+assert.ok(withLink.text.trimEnd().endsWith("Riya"));
 
 console.log("invoice ok");

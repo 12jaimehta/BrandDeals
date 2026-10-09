@@ -12,6 +12,7 @@ export type CreatorProfile = {
   pan: string;
   upiId: string;
   address: string;
+  razorpayAccountId: string;
 };
 
 export const EMPTY_PROFILE: CreatorProfile = {
@@ -26,6 +27,7 @@ export const EMPTY_PROFILE: CreatorProfile = {
   pan: "",
   upiId: "",
   address: "",
+  razorpayAccountId: "",
 };
 
 type ProfileRow = {
@@ -40,6 +42,7 @@ type ProfileRow = {
   pan: string | null;
   upi_id: string | null;
   address: string | null;
+  razorpay_account_id?: string | null;
 };
 
 export function normalizeHandle(value: string) {
@@ -71,6 +74,7 @@ export function cleanProfile(input: unknown): CreatorProfile {
     pan: text(raw.pan, 12).toUpperCase(),
     upiId: text(raw.upiId, 80),
     address: text(raw.address, 300),
+    razorpayAccountId: text(raw.razorpayAccountId, 20),
   };
 }
 
@@ -87,6 +91,7 @@ function fromRow(row: ProfileRow): CreatorProfile {
     pan: row.pan ?? "",
     upiId: row.upi_id ?? "",
     address: row.address ?? "",
+    razorpayAccountId: row.razorpay_account_id ?? "",
   };
 }
 
@@ -106,6 +111,9 @@ export async function loadProfileByHandle(client: SupabaseClient, handle: string
 
 export async function saveProfile(client: SupabaseClient, userId: string, profile: CreatorProfile) {
   if (!validHandle(profile.handle)) throw new Error("Pick a handle of 3 to 30 letters, numbers, dots, or underscores.");
+  if (profile.razorpayAccountId && !/^acc_[A-Za-z0-9]{14}$/.test(profile.razorpayAccountId)) {
+    throw new Error("A Razorpay payout account ID looks like acc_ followed by 14 letters and numbers.");
+  }
   const { error } = await client.from("creator_profiles").upsert({
     user_id: userId,
     handle: profile.handle,
@@ -119,12 +127,13 @@ export async function saveProfile(client: SupabaseClient, userId: string, profil
     pan: profile.pan,
     upi_id: profile.upiId,
     address: profile.address,
+    razorpay_account_id: profile.razorpayAccountId || null,
     updated_at: new Date().toISOString(),
   });
   if (error?.code === "23505") throw new Error("That handle is taken. Try another.");
   if (error) {
     throw new Error(/relation|schema cache|could not find/i.test(error.message)
-      ? "Run supabase/migrations/0004_deal_desk.sql in the Supabase SQL editor first."
+      ? "Run the migrations in supabase/migrations (through 0005_payments.sql) in the Supabase SQL editor first."
       : "Your profile was not saved.");
   }
 }

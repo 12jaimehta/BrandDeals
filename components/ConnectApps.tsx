@@ -124,7 +124,7 @@ export function ConnectApps({
       name: "Instagram",
       detail: instagramLive
         ? "DMs on a professional account."
-        : "Sandbox only. Meta app review is not cleared, so only tester accounts connect.",
+        : "Live Instagram API. Until Meta approves the app, only accounts added as testers can connect.",
       live: true,
       href: "/auth/instagram",
       connectLabel: "Connect Instagram",
